@@ -8,8 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('member_rewards_activities')) {
-            Schema::create('member_rewards_activities', function (Blueprint $table) {
+        if (!Schema::hasTable('member_engagement_activities')) {
+            Schema::create('member_engagement_activities', function (Blueprint $table) {
                 $table->id();
                 $table->timestamp('activity_timestamp')->comment('When the activity occurred in-game');
                 $table->unsignedBigInteger('user_id')->nullable();
@@ -33,6 +33,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('member_rewards_activities');
+        Schema::dropIfExists('member_engagement_activities');
     }
 };

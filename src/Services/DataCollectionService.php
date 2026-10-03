@@ -71,6 +71,12 @@ class DataCollectionService
                 $since = Carbon::now()->subDays(90);
             }
 
+            // Total attackers per killmail, used to determine fleet size for Fleet Participation
+            $attackerCounts = DB::table('killmail_attackers')
+                ->select('killmail_id', DB::raw('COUNT(*) as attacker_count'))
+                ->groupBy('killmail_id')
+                ->pluck('attacker_count', 'killmail_id');
+
             $kills = DB::table('killmail_details')
                 ->join('killmail_attackers', 'killmail_details.killmail_id', '=', 'killmail_attackers.killmail_id')
                 ->join('killmail_victims', 'killmail_details.killmail_id', '=', 'killmail_victims.killmail_id')
@@ -102,6 +108,7 @@ class DataCollectionService
                             'killmail_id' => $kill->killmail_id,
                             'victim_character_id' => $kill->victim_character_id,
                             'ship_type_id' => $kill->ship_type_id,
+                            'attacker_count' => $attackerCounts[$kill->killmail_id] ?? 1,
                         ],
                     ]
                 );

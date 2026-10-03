@@ -50,7 +50,9 @@ class AggregationService
                 'mining_quantity' => 0,
                 'mining_value' => 0,
                 'tax_bounty_amount' => 0,
-                'pvp_kill_instances' => 0,
+                'pvp_kills' => 0,
+                'pvp_losses' => 0,
+                'fleet_participation' => 0,
             ];
 
             // Aggregate by activity type
@@ -58,15 +60,14 @@ class AggregationService
                 match ($activity->activity_type) {
                     'mining' => $stats['mining_quantity'] += $activity->metadata['quantity'] ?? 0,
                     'tax_wallet' => $stats['tax_bounty_amount'] += $activity->metadata['amount'] ?? 0,
-                    'pvp_kill' => $stats['pvp_kill_instances'] += 1,
+                    'pvp_kill' => $stats['pvp_kills'] += 1,
+                    'pvp_loss' => $stats['pvp_losses'] += 1,
                     default => null,
                 };
             }
 
-            // Deduplicate PvP kills by hour (max 1 per hour)
-            if ($stats['pvp_kill_instances'] > 0) {
-                $stats['pvp_kill_instances'] = $this->deduplicateKillsByHour($groupedActivities);
-            }
+            // Fleet participation: killmails with 5+ total attackers, deduplicated to 1 per hour
+            $stats['fleet_participation'] = $this->countFleetParticipationByHour($groupedActivities);
 
             DailyMemberStat::updateOrCreate(
                 [
@@ -83,16 +84,17 @@ class AggregationService
         return $count;
     }
 
-    private function deduplicateKillsByHour($activities): int
+    private function countFleetParticipationByHour($activities): int
     {
-        $killActivities = $activities->filter(fn($a) => $a->activity_type === 'pvp_kill');
+        $fleetKills = $activities->filter(function ($activity) {
+            return $activity->activity_type === 'pvp_kill'
+                && ($activity->metadata['attacker_count'] ?? 1) >= 5;
+        });
 
         $hourBuckets = [];
-        foreach ($killActivities as $activity) {
+        foreach ($fleetKills as $activity) {
             $hour = $activity->activity_timestamp->copy()->startOfHour()->toDateTimeString();
-            if (!isset($hourBuckets[$hour])) {
-                $hourBuckets[$hour] = true;
-            }
+            $hourBuckets[$hour] = true;
         }
 
         return count($hourBuckets);

@@ -8,8 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('member_rewards_activity_aggregation_caches')) {
-            Schema::create('member_rewards_activity_aggregation_caches', function (Blueprint $table) {
+        if (!Schema::hasTable('member_engagement_activity_aggregation_caches')) {
+            Schema::create('member_engagement_activity_aggregation_caches', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('user_id');
                 $table->string('aggregation_period')->comment('day, week, month, quarter, year, custom');
@@ -30,6 +30,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('member_rewards_activity_aggregation_caches');
+        Schema::dropIfExists('member_engagement_activity_aggregation_caches');
     }
 };

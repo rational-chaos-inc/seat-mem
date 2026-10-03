@@ -8,8 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('member_rewards_activity_alerts')) {
-            Schema::create('member_rewards_activity_alerts', function (Blueprint $table) {
+        if (!Schema::hasTable('member_engagement_activity_alerts')) {
+            Schema::create('member_engagement_activity_alerts', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('user_id');
                 $table->enum('alert_type', ['activity_threshold', 'unusual_activity', 'member_alert']);
@@ -26,6 +26,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('member_rewards_activity_alerts');
+        Schema::dropIfExists('member_engagement_activity_alerts');
     }
 };
