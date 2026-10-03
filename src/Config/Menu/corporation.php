@@ -2,11 +2,11 @@
 
 return [
     [
-        'name' => 'member-rewards-corporation',
-        'label' => 'Member Rewards (Director)',
-        'permission' => 'member-rewards.view_all_activities',
-        'highlight_view' => 'member-rewards-director',
-        'route' => 'member-rewards.director.index',
+        'name' => 'member-engagement-corporation',
+        'label' => 'Member Engagement Module (Director)',
+        'permission' => 'member-engagement.view_all_activities',
+        'highlight_view' => 'member-engagement-director',
+        'route' => 'member-engagement.director.index',
         'icon' => 'fas fa-crown',
     ],
 ];

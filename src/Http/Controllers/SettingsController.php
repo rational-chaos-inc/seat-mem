@@ -1,10 +1,10 @@
 <?php
 
-namespace RCI\MemberRewards\Http\Controllers;
+namespace RCI\MemberEngagement\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use RCI\MemberRewards\Models\MemberRewardsSetting;
+use RCI\MemberEngagement\Models\MemberEngagementSetting;
 
 class SettingsController
 {
@@ -12,7 +12,7 @@ class SettingsController
     {
         $user = Auth::user();
 
-        if (!$user->can('member-rewards.view_all_activities')) {
+        if (!$user->can('member-engagement.view_all_activities')) {
             abort(403, 'Unauthorized');
         }
 
@@ -22,7 +22,7 @@ class SettingsController
         // Get or create settings for each corporation
         $settings = [];
         foreach ($corporations as $corp) {
-            $setting = MemberRewardsSetting::firstOrCreate(
+            $setting = MemberEngagementSetting::firstOrCreate(
                 [
                     'corporation_id' => $corp->corporation_id,
                     'user_id' => $user->id,
@@ -42,7 +42,7 @@ class SettingsController
             $settings[$corp->corporation_id] = $setting;
         }
 
-        return view('member-rewards::settings.index', [
+        return view('member-engagement::settings.index', [
             'corporations' => $corporations,
             'settings' => $settings,
         ]);
@@ -52,7 +52,7 @@ class SettingsController
     {
         $user = Auth::user();
 
-        if (!$user->can('member-rewards.view_all_activities')) {
+        if (!$user->can('member-engagement.view_all_activities')) {
             abort(403, 'Unauthorized');
         }
 
@@ -69,7 +69,7 @@ class SettingsController
             'fleet_participation_weight' => 'required|numeric|min:0|max:10',
         ]);
 
-        MemberRewardsSetting::updateOrCreate(
+        MemberEngagementSetting::updateOrCreate(
             [
                 'corporation_id' => $validated['corporation_id'],
                 'user_id' => $user->id,
@@ -87,7 +87,7 @@ class SettingsController
             ]
         );
 
-        return redirect()->route('member-rewards.settings')
+        return redirect()->route('member-engagement.settings')
             ->with('success', 'Settings saved successfully!');
     }
 

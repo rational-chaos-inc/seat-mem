@@ -1,6 +1,6 @@
 <?php
 
-namespace RCI\MemberRewards\Events;
+namespace RCI\MemberEngagement\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;

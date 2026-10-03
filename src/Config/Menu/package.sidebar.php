@@ -1,37 +1,37 @@
 <?php
 
 return [
-    'member-rewards' => [
-        'permission' => 'member-rewards.view_own_activities',
-        'name' => 'Member Rewards',
+    'member-engagement' => [
+        'permission' => 'member-engagement.view_own_activities',
+        'name' => 'Member Engagement Module',
         'icon' => 'fas fa-chart-bar',
-        'route_segment' => 'member-rewards',
+        'route_segment' => 'member-engagement',
         'entries' => [
             [
                 'name' => 'My Activities',
                 'icon' => 'fas fa-chart-line',
-                'route' => 'member-rewards.dashboard',
-                'permission' => 'member-rewards.view_own_activities',
+                'route' => 'member-engagement.dashboard',
+                'permission' => 'member-engagement.view_own_activities',
             ],
         ],
     ],
-    'member-rewards-director' => [
-        'permission' => 'member-rewards.view_all_activities',
-        'name' => 'Member Rewards (Director)',
+    'member-engagement-director' => [
+        'permission' => 'member-engagement.view_all_activities',
+        'name' => 'Member Engagement Module (Director)',
         'icon' => 'fas fa-crown',
-        'route_segment' => 'member-rewards-director',
+        'route_segment' => 'member-engagement-director',
         'entries' => [
             [
                 'name' => 'Corporation Dashboard',
                 'icon' => 'fas fa-chart-area',
-                'route' => 'member-rewards.director.index',
-                'permission' => 'member-rewards.view_all_activities',
+                'route' => 'member-engagement.director.index',
+                'permission' => 'member-engagement.view_all_activities',
             ],
             [
                 'name' => 'Settings',
                 'icon' => 'fas fa-cog',
-                'route' => 'member-rewards.settings',
-                'permission' => 'member-rewards.view_all_activities',
+                'route' => 'member-engagement.settings',
+                'permission' => 'member-engagement.view_all_activities',
             ],
         ],
     ],

@@ -1,12 +1,12 @@
 <?php
 
-namespace RCI\MemberRewards\Models;
+namespace RCI\MemberEngagement\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
 class DailyMemberStat extends Model
 {
-    protected $table = 'member_rewards_daily_stats';
+    protected $table = 'member_engagement_daily_stats';
 
     protected $fillable = [
         'date',

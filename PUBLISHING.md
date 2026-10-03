@@ -1,6 +1,6 @@
 # Publishing to Packagist
 
-This guide explains how to publish the SeAT Member Rewards Programme to Packagist so it's discoverable via Composer.
+This guide explains how to publish the SeAT Member Engagement Module to Packagist so it's discoverable via Composer.
 
 ## Prerequisites
 
@@ -42,17 +42,17 @@ Or create via GitHub UI:
 
 To automatically update Packagist when you push tags:
 
-1. Go to: https://packagist.org/packages/rci/member-rewards
+1. Go to: https://packagist.org/packages/rci/member-engagement
 2. Click "Settings" (top right)
 3. Under "Update Strategy", enable "GitHub Service Hook"
-4. Or manually visit: https://packagist.org/api/update-package?username=YOUR_USERNAME&name=rci/member-rewards
+4. Or manually visit: https://packagist.org/api/update-package?username=YOUR_USERNAME&name=rci/member-engagement
 
 ## Verification
 
 After publishing, anyone can install via:
 
 ```bash
-composer require rci/member-rewards
+composer require rci/member-engagement
 ```
 
 ## Version Management

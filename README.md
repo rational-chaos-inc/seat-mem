@@ -1,4 +1,4 @@
-# SeAT Member Rewards Programme
+# SeAT Member Engagement Module
 
 A SeAT plugin for tracking corporation member activity across mining, PvP combat, and tax wallet contributions.
 
@@ -41,13 +41,13 @@ A SeAT plugin for tracking corporation member activity across mining, PvP combat
 
    Then install:
    ```bash
-   composer require rci/member-rewards
+   composer require rci/member-engagement
    ```
 
 2. **Publish configuration and views**
    ```bash
-   php artisan vendor:publish --tag=member-rewards-config
-   php artisan vendor:publish --tag=member-rewards-views
+   php artisan vendor:publish --tag=member-engagement-config
+   php artisan vendor:publish --tag=member-engagement-views
    ```
 
 3. **Run database migrations**
@@ -57,7 +57,7 @@ A SeAT plugin for tracking corporation member activity across mining, PvP combat
 
 4. **Seed scheduled tasks** (via database seeder)
    ```bash
-   php artisan db:seed --class="\RCI\MemberRewards\Database\Seeders\ScheduleSeeder"
+   php artisan db:seed --class="\RCI\MemberEngagement\Database\Seeders\ScheduleSeeder"
    ```
 
 5. **Configure permissions** (if using role-based access)
@@ -79,11 +79,11 @@ A SeAT plugin for tracking corporation member activity across mining, PvP combat
 7. **Verify installation**
    ```bash
    # Check if service provider is registered
-   php artisan list | grep member-rewards
+   php artisan list | grep member-engagement
 
    # Verify permissions exist
    php artisan tinker
-   >>> \Spatie\Permission\Models\Permission::where('name', 'like', '%member-rewards%')->get()
+   >>> \Spatie\Permission\Models\Permission::where('name', 'like', '%member-engagement%')->get()
 
    # Verify schedule is registered (if Manager-Core available)
    php artisan manager-core:diagnose --detailed
@@ -105,13 +105,13 @@ The plugin will auto-detect Manager-Core and enable:
 
 ## Configuration
 
-Edit `config/member-rewards.php` to configure:
+Edit `config/member-engagement.php` to configure:
 
 ```php
 return [
-    'enabled' => env('MEMBER_REWARDS_ENABLED', true),
-    'polling_interval' => env('MEMBER_REWARDS_POLLING_INTERVAL', 5),  // minutes
-    'aggregation_cache_ttl' => env('MEMBER_REWARDS_CACHE_TTL', 0),     // seconds (0 = disabled)
+    'enabled' => env('MEMBER_ENGAGEMENT_ENABLED', true),
+    'polling_interval' => env('MEMBER_ENGAGEMENT_POLLING_INTERVAL', 5),  // minutes
+    'aggregation_cache_ttl' => env('MEMBER_ENGAGEMENT_CACHE_TTL', 0),     // seconds (0 = disabled)
     'esi.retry_attempts' => 3,
     'esi.retry_delay_seconds' => 2,
     'time_windows' => ['day', 'week', 'month', 'quarter', 'year'],
@@ -134,14 +134,14 @@ php artisan tinker
 >>> \Illuminate\Support\Facades\Log::tail('laravel.log', 50)
 
 # Or via file
-tail -f storage/logs/laravel.log | grep 'member-rewards'
+tail -f storage/logs/laravel.log | grep 'member-engagement'
 ```
 
 ### Access the plugin
-- **Member Dashboard:** `/member-rewards/dashboard`
-- **Director Dashboard:** `/member-rewards/director` (requires `view_all_activities` permission)
-- **League Tables:** `/member-rewards/league-tables`
-- **API:** `/api/member-rewards/...`
+- **Member Dashboard:** `/member-engagement/dashboard`
+- **Director Dashboard:** `/member-engagement/director` (requires `view_all_activities` permission)
+- **League Tables:** `/member-engagement/league-tables`
+- **API:** `/api/member-engagement/...`
 
 ## Uninstallation
 
@@ -149,10 +149,10 @@ To remove the plugin:
 
 ```bash
 # Disable the plugin from SeAT admin or composer.json
-composer remove rci/member-rewards
+composer remove rci/member-engagement
 
 # Remove database tables (careful!)
-php artisan migrate:rollback --path=vendor/rci/member-rewards/database/migrations
+php artisan migrate:rollback --path=vendor/rci/member-engagement/database/migrations
 ```
 
 ## Troubleshooting
@@ -165,7 +165,7 @@ php artisan migrate:rollback --path=vendor/rci/member-rewards/database/migration
 
 **No permissions appearing:**
 - Run migration: `php artisan migrate`
-- Seed permissions: `php artisan db:seed --class="\RCI\MemberRewards\Database\Seeders\ScheduleSeeder"`
+- Seed permissions: `php artisan db:seed --class="\RCI\MemberEngagement\Database\Seeders\ScheduleSeeder"`
 - Clear config cache: `php artisan config:cache`
 
 **Manager-Core integration not working:**

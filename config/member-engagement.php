@@ -1,9 +1,9 @@
 <?php
 
 return [
-    'enabled' => env('MEMBER_REWARDS_ENABLED', true),
+    'enabled' => env('MEMBER_ENGAGEMENT_ENABLED', true),
 
-    'aggregation_cache_ttl' => env('MEMBER_REWARDS_CACHE_TTL', 0),
+    'aggregation_cache_ttl' => env('MEMBER_ENGAGEMENT_CACHE_TTL', 0),
 
     'time_windows' => [
         'day' => 1,

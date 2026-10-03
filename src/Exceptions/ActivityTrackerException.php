@@ -1,6 +1,6 @@
 <?php
 
-namespace RCI\MemberRewards\Exceptions;
+namespace RCI\MemberEngagement\Exceptions;
 
 use Exception;
 

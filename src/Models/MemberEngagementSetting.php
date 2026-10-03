@@ -1,12 +1,12 @@
 <?php
 
-namespace RCI\MemberRewards\Models;
+namespace RCI\MemberEngagement\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class MemberRewardsSetting extends Model
+class MemberEngagementSetting extends Model
 {
-    protected $table = 'member_rewards_settings';
+    protected $table = 'member_engagement_settings';
 
     protected $fillable = [
         'corporation_id',

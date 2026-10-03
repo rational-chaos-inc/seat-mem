@@ -1,6 +1,6 @@
 <?php
 
-namespace RCI\MemberRewards\Models;
+namespace RCI\MemberEngagement\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActivityAggregationCache extends Model
 {
-    protected $table = 'member_rewards_activity_aggregation_caches';
+    protected $table = 'member_engagement_activity_aggregation_caches';
 
     protected $fillable = [
         'user_id',

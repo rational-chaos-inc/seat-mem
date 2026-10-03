@@ -16,7 +16,7 @@
                         <label>Time Window:</label>
                         <div class="btn-group" role="group">
                             @foreach(['day' => 'Day', 'week' => 'Week', 'month' => 'Month', 'quarter' => 'Quarter', 'year' => 'Year'] as $window => $label)
-                                <a href="{{ route('member-rewards.league-tables', ['window' => $window, 'type' => $activityType]) }}"
+                                <a href="{{ route('member-engagement.league-tables', ['window' => $window, 'type' => $activityType]) }}"
                                    class="btn btn-sm {{ $timeWindow === $window ? 'btn-primary' : 'btn-outline-primary' }}">
                                     {{ $label }}
                                 </a>
@@ -27,7 +27,7 @@
                         <label>Activity Type:</label>
                         <div class="btn-group" role="group">
                             @foreach($activityTypes as $type)
-                                <a href="{{ route('member-rewards.league-tables', ['window' => $timeWindow, 'type' => $type]) }}"
+                                <a href="{{ route('member-engagement.league-tables', ['window' => $timeWindow, 'type' => $type]) }}"
                                    class="btn btn-sm {{ $activityType === $type ? 'btn-primary' : 'btn-outline-primary' }}">
                                     {{ ucfirst(str_replace('_', ' ', $type)) }}
                                 </a>
@@ -76,7 +76,7 @@
                                         <td>{{ $member['character_count'] }}</td>
                                         <td>{{ number_format($member['value_per_character'], 2) }}</td>
                                         <td>
-                                            <a href="{{ route('member-rewards.member.detail', ['userId' => $member['user_id'], 'window' => $timeWindow]) }}"
+                                            <a href="{{ route('member-engagement.member.detail', ['userId' => $member['user_id'], 'window' => $timeWindow]) }}"
                                                class="btn btn-sm btn-primary">
                                                 View
                                             </a>

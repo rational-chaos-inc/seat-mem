@@ -1,6 +1,6 @@
 <?php
 
-namespace RCI\MemberRewards\Models;
+namespace RCI\MemberEngagement\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
@@ -8,7 +8,7 @@ use Carbon\Carbon;
 
 class Activity extends Model
 {
-    protected $table = 'member_rewards_activities';
+    protected $table = 'member_engagement_activities';
 
     protected $fillable = [
         'activity_timestamp',

@@ -1,6 +1,6 @@
 <?php
 
-namespace RCI\MemberRewards\Database\Seeders;
+namespace RCI\MemberEngagement\Database\Seeders;
 
 use Seat\Services\Seeding\AbstractScheduleSeeder;
 
@@ -13,7 +13,7 @@ class ScheduleSeeder extends AbstractScheduleSeeder
     {
         return [
             [
-                'command' => 'member-rewards:collect-activities',
+                'command' => 'member-engagement:collect-activities',
                 'expression' => '*/5 * * * *',  // Every 5 minutes
                 'allow_overlap' => false,
                 'allow_maintenance' => false,
@@ -21,7 +21,7 @@ class ScheduleSeeder extends AbstractScheduleSeeder
                 'ping_after' => null,
             ],
             [
-                'command' => 'member-rewards:check-alerts',
+                'command' => 'member-engagement:check-alerts',
                 'expression' => '*/5 * * * *',  // Every 5 minutes
                 'allow_overlap' => false,
                 'allow_maintenance' => false,

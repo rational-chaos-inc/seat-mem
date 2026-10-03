@@ -1,6 +1,6 @@
 <?php
 
-namespace RCI\MemberRewards\Jobs;
+namespace RCI\MemberEngagement\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -8,7 +8,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use RCI\MemberRewards\Services\ActivityCollectionService;
+use RCI\MemberEngagement\Services\ActivityCollectionService;
 
 class CollectActivitiesJob implements ShouldQueue
 {

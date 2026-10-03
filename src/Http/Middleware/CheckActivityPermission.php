@@ -1,6 +1,6 @@
 <?php
 
-namespace RCI\MemberRewards\Http\Middleware;
+namespace RCI\MemberEngagement\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;

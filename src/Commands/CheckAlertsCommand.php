@@ -1,17 +1,17 @@
 <?php
 
-namespace RCI\MemberRewards\Commands;
+namespace RCI\MemberEngagement\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
-use RCI\MemberRewards\Models\ActivityAlert;
-use RCI\MemberRewards\Services\AlertService;
+use RCI\MemberEngagement\Models\ActivityAlert;
+use RCI\MemberEngagement\Services\AlertService;
 
 class CheckAlertsCommand extends Command
 {
-    protected $signature = 'member-rewards:check-alerts {user_id?}';
+    protected $signature = 'member-engagement:check-alerts {user_id?}';
 
-    protected $description = 'Check and dispatch member rewards alerts';
+    protected $description = 'Check and dispatch member engagement alerts';
 
     public function handle(AlertService $alertService): int
     {

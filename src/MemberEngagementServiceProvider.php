@@ -1,19 +1,19 @@
 <?php
 
-namespace RCI\MemberRewards;
+namespace RCI\MemberEngagement;
 
 use Seat\Services\AbstractSeatPlugin;
-use RCI\MemberRewards\Services\ActivityCollectionService;
-use RCI\MemberRewards\Services\AggregationService;
-use RCI\MemberRewards\Services\ESIActivityService;
-use RCI\MemberRewards\Services\TaxWalletActivityService;
-use RCI\MemberRewards\Services\MiningActivityService;
+use RCI\MemberEngagement\Services\ActivityCollectionService;
+use RCI\MemberEngagement\Services\AggregationService;
+use RCI\MemberEngagement\Services\ESIActivityService;
+use RCI\MemberEngagement\Services\TaxWalletActivityService;
+use RCI\MemberEngagement\Services\MiningActivityService;
 
-class MemberRewardsServiceProvider extends AbstractSeatPlugin
+class MemberEngagementServiceProvider extends AbstractSeatPlugin
 {
     public function getName(): string
     {
-        return 'SeAT Member Rewards Programme';
+        return 'SeAT Member Engagement Module';
     }
 
     public function getPackageRepositoryUrl(): string
@@ -23,7 +23,7 @@ class MemberRewardsServiceProvider extends AbstractSeatPlugin
 
     public function getPackagistPackageName(): string
     {
-        return 'rci/member-rewards';
+        return 'rci/member-engagement';
     }
 
     public function getPackagistVendorName(): string
@@ -33,8 +33,8 @@ class MemberRewardsServiceProvider extends AbstractSeatPlugin
 
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../config/member-rewards.php', 'member-rewards');
-        $this->registerPermissions(__DIR__ . '/Config/Permissions/member-rewards.permissions.php', 'member-rewards');
+        $this->mergeConfigFrom(__DIR__ . '/../config/member-engagement.php', 'member-engagement');
+        $this->registerPermissions(__DIR__ . '/Config/Permissions/member-engagement.permissions.php', 'member-engagement');
         $this->mergeConfigFrom(__DIR__ . '/Config/Menu/package.sidebar.php', 'package.sidebar');
 
         $this->registerServices();
@@ -42,7 +42,7 @@ class MemberRewardsServiceProvider extends AbstractSeatPlugin
 
     public function boot(): void
     {
-        $this->loadTranslationsFrom(__DIR__ . '/../resources/lang', 'member-rewards');
+        $this->loadTranslationsFrom(__DIR__ . '/../resources/lang', 'member-engagement');
         $this->publishConfig();
         $this->publishMigrations();
         $this->registerRoutes();
@@ -58,14 +58,14 @@ class MemberRewardsServiceProvider extends AbstractSeatPlugin
         $this->app->singleton(MiningActivityService::class);
         $this->app->singleton(ActivityCollectionService::class);
         $this->app->singleton(AggregationService::class);
-        $this->app->singleton(\RCI\MemberRewards\Services\AlertService::class);
-        $this->app->singleton(\RCI\MemberRewards\Services\DataCollectionService::class);
+        $this->app->singleton(\RCI\MemberEngagement\Services\AlertService::class);
+        $this->app->singleton(\RCI\MemberEngagement\Services\DataCollectionService::class);
     }
 
     private function publishConfig(): void
     {
         $this->publishes([
-            __DIR__ . '/../config/member-rewards.php' => config_path('member-rewards.php'),
+            __DIR__ . '/../config/member-engagement.php' => config_path('member-engagement.php'),
         ], 'config');
     }
 
@@ -84,22 +84,22 @@ class MemberRewardsServiceProvider extends AbstractSeatPlugin
 
     private function registerViews(): void
     {
-        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'member-rewards');
+        $this->loadViewsFrom(__DIR__ . '/../resources/views', 'member-engagement');
 
         $this->publishes([
-            __DIR__ . '/../resources/views' => resource_path('views/vendor/member-rewards'),
+            __DIR__ . '/../resources/views' => resource_path('views/vendor/member-engagement'),
         ], 'views');
     }
 
     private function registerCommands(): void
     {
         $this->commands([
-            \RCI\MemberRewards\Commands\SyncActivitiesCommand::class,
-            \RCI\MemberRewards\Commands\GenerateTestDataCommand::class,
-            \RCI\MemberRewards\Commands\AggregateStatsCommand::class,
-            \RCI\MemberRewards\Commands\CollectActivitiesCommand::class,
-            \RCI\MemberRewards\Commands\CacheAggregationsCommand::class,
-            \RCI\MemberRewards\Commands\CheckAlertsCommand::class,
+            \RCI\MemberEngagement\Commands\SyncActivitiesCommand::class,
+            \RCI\MemberEngagement\Commands\GenerateTestDataCommand::class,
+            \RCI\MemberEngagement\Commands\AggregateStatsCommand::class,
+            \RCI\MemberEngagement\Commands\CollectActivitiesCommand::class,
+            \RCI\MemberEngagement\Commands\CacheAggregationsCommand::class,
+            \RCI\MemberEngagement\Commands\CheckAlertsCommand::class,
         ]);
     }
 
@@ -107,7 +107,7 @@ class MemberRewardsServiceProvider extends AbstractSeatPlugin
     {
         // Register database seeders with schedule definitions
         // SeAT handles scheduling through its own schedule management system
-        $this->registerDatabaseSeeders(\RCI\MemberRewards\Database\Seeders\ScheduleSeeder::class);
+        $this->registerDatabaseSeeders(\RCI\MemberEngagement\Database\Seeders\ScheduleSeeder::class);
     }
 
 }

@@ -1,13 +1,13 @@
 <?php
 
-namespace RCI\MemberRewards\Http\Controllers\Api;
+namespace RCI\MemberEngagement\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use RCI\MemberRewards\Models\ActivityAlert;
-use RCI\MemberRewards\Services\AlertService;
+use RCI\MemberEngagement\Models\ActivityAlert;
+use RCI\MemberEngagement\Services\AlertService;
 
 class AlertsApiController
 {

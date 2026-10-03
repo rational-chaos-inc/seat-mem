@@ -1,11 +1,11 @@
 <?php
 
-namespace RCI\MemberRewards\Http\Controllers\Api;
+namespace RCI\MemberEngagement\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use RCI\MemberRewards\Services\AggregationService;
+use RCI\MemberEngagement\Services\AggregationService;
 
 class AggregationApiController
 {
@@ -27,7 +27,7 @@ class AggregationApiController
             }
 
             // Validate type if provided
-            if ($type && !in_array($type, config('member-rewards.activity_types', []))) {
+            if ($type && !in_array($type, config('member-engagement.activity_types', []))) {
                 return response()->json(['error' => 'Invalid activity type'], 422);
             }
 
@@ -143,7 +143,7 @@ class AggregationApiController
                 return response()->json(['error' => 'Invalid time window'], 422);
             }
 
-            if (!in_array($type, config('member-rewards.activity_types', []))) {
+            if (!in_array($type, config('member-engagement.activity_types', []))) {
                 return response()->json(['error' => 'Invalid activity type'], 422);
             }
 

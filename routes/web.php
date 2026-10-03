@@ -1,13 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use RCI\MemberRewards\Http\Controllers\DashboardController;
-use RCI\MemberRewards\Http\Controllers\DirectorController;
-use RCI\MemberRewards\Http\Controllers\SettingsController;
+use RCI\MemberEngagement\Http\Controllers\DashboardController;
+use RCI\MemberEngagement\Http\Controllers\DirectorController;
+use RCI\MemberEngagement\Http\Controllers\SettingsController;
 
 Route::middleware(['web', 'auth', 'verified'])
-    ->prefix('member-rewards')
-    ->name('member-rewards.')
+    ->prefix('member-engagement')
+    ->name('member-engagement.')
     ->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'member'])
             ->name('dashboard');

@@ -1,13 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use RCI\MemberRewards\Http\Controllers\Api\ActivityApiController;
-use RCI\MemberRewards\Http\Controllers\Api\AggregationApiController;
-use RCI\MemberRewards\Http\Controllers\Api\AlertsApiController;
+use RCI\MemberEngagement\Http\Controllers\Api\ActivityApiController;
+use RCI\MemberEngagement\Http\Controllers\Api\AggregationApiController;
+use RCI\MemberEngagement\Http\Controllers\Api\AlertsApiController;
 
 Route::middleware(['api', 'auth:api'])
-    ->prefix('member-rewards')
-    ->name('member-rewards.api.')
+    ->prefix('member-engagement')
+    ->name('member-engagement.api.')
     ->group(function () {
         // Activities
         Route::get('/activities', [ActivityApiController::class, 'index'])

@@ -1,14 +1,14 @@
 <?php
 
-namespace RCI\MemberRewards\Commands;
+namespace RCI\MemberEngagement\Commands;
 
 use Illuminate\Console\Command;
 use Carbon\Carbon;
-use RCI\MemberRewards\Services\AggregationService;
+use RCI\MemberEngagement\Services\AggregationService;
 
 class AggregateStatsCommand extends Command
 {
-    protected $signature = 'member-rewards:aggregate {--days=7 : Days back to aggregate}';
+    protected $signature = 'member-engagement:aggregate {--days=7 : Days back to aggregate}';
 
     protected $description = 'Aggregate daily member statistics';
 

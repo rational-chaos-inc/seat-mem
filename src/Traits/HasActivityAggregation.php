@@ -1,9 +1,9 @@
 <?php
 
-namespace RCI\MemberRewards\Traits;
+namespace RCI\MemberEngagement\Traits;
 
 use Carbon\Carbon;
-use RCI\MemberRewards\Models\Activity;
+use RCI\MemberEngagement\Models\Activity;
 
 trait HasActivityAggregation
 {

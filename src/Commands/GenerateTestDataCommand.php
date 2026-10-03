@@ -1,14 +1,14 @@
 <?php
 
-namespace RCI\MemberRewards\Commands;
+namespace RCI\MemberEngagement\Commands;
 
 use Illuminate\Console\Command;
-use RCI\MemberRewards\Models\Activity;
+use RCI\MemberEngagement\Models\Activity;
 use Carbon\Carbon;
 
 class GenerateTestDataCommand extends Command
 {
-    protected $signature = 'member-rewards:test-data {count=50}';
+    protected $signature = 'member-engagement:test-data {count=50}';
 
     protected $description = 'Generate test activity data for development';
 

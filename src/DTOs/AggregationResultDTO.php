@@ -1,6 +1,6 @@
 <?php
 
-namespace RCI\MemberRewards\DTOs;
+namespace RCI\MemberEngagement\DTOs;
 
 class AggregationResultDTO
 {

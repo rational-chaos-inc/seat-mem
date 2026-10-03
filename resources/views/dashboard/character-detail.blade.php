@@ -16,7 +16,7 @@
                         <label>Time Window:</label>
                         <div class="btn-group" role="group">
                             @foreach(['day' => 'Day', 'week' => 'Week', 'month' => 'Month', 'quarter' => 'Quarter', 'year' => 'Year'] as $window => $label)
-                                <a href="{{ route('member-rewards.character.detail', ['characterId' => $character->character_id, 'window' => $window]) }}"
+                                <a href="{{ route('member-engagement.character.detail', ['characterId' => $character->character_id, 'window' => $window]) }}"
                                    class="btn btn-sm {{ $timeWindow === $window ? 'btn-primary' : 'btn-outline-primary' }}">
                                     {{ $label }}
                                 </a>
@@ -24,7 +24,7 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <a href="{{ route('member-rewards.dashboard') }}" class="btn btn-secondary float-right">
+                        <a href="{{ route('member-engagement.dashboard') }}" class="btn btn-secondary float-right">
                             ← Back to Dashboard
                         </a>
                     </div>

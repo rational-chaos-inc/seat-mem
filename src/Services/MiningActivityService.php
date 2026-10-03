@@ -1,11 +1,11 @@
 <?php
 
-namespace RCI\MemberRewards\Services;
+namespace RCI\MemberEngagement\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use RCI\MemberRewards\Models\Activity;
+use RCI\MemberEngagement\Models\Activity;
 
 class MiningActivityService
 {
@@ -13,7 +13,7 @@ class MiningActivityService
 
     public function __construct()
     {
-        $this->useManagerCore = config('member-rewards.manager_core_integration', true)
+        $this->useManagerCore = config('member-engagement.manager_core_integration', true)
             && class_exists(\ManagerCore\Topics::class);
     }
 

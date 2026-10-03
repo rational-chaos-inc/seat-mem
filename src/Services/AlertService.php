@@ -1,12 +1,12 @@
 <?php
 
-namespace RCI\MemberRewards\Services;
+namespace RCI\MemberEngagement\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use RCI\MemberRewards\Models\Activity;
-use RCI\MemberRewards\Models\ActivityAlert;
+use RCI\MemberEngagement\Models\Activity;
+use RCI\MemberEngagement\Models\ActivityAlert;
 
 class AlertService
 {
@@ -262,7 +262,7 @@ class AlertService
 
             $testContext = [
                 'test' => true,
-                'message' => 'This is a test notification from Member Rewards',
+                'message' => 'This is a test notification from Member Engagement Module',
             ];
 
             $this->dispatchAlert($alert, $testContext);

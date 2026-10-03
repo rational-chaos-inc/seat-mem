@@ -1,13 +1,13 @@
 @extends('web::layouts.grids.12')
 
-@section('title', 'Member Rewards Settings')
+@section('title', 'Member Engagement Module Settings')
 
 @section('content')
 <div class="row">
     <div class="col-md-12">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Member Rewards Settings</h3>
+                <h3 class="card-title">Member Engagement Module Settings</h3>
             </div>
             <div class="card-body">
                 @if(session('success'))
@@ -25,7 +25,7 @@
                             <h5 class="card-title mb-0">{{ $corp->name ?? 'Unknown Corporation' }}</h5>
                         </div>
                         <div class="card-body">
-                            <form action="{{ route('member-rewards.settings.store') }}" method="POST">
+                            <form action="{{ route('member-engagement.settings.store') }}" method="POST">
                                 @csrf
                                 <input type="hidden" name="corporation_id" value="{{ $corp->corporation_id }}">
 

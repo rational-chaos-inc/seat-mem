@@ -1,14 +1,14 @@
 <?php
 
-namespace RCI\MemberRewards\Commands;
+namespace RCI\MemberEngagement\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
-use RCI\MemberRewards\Models\ActivityAggregationCache;
+use RCI\MemberEngagement\Models\ActivityAggregationCache;
 
 class CacheAggregationsCommand extends Command
 {
-    protected $signature = 'member-rewards:cache-aggregations
+    protected $signature = 'member-engagement:cache-aggregations
                             {action : clear|warmup|stats}
                             {--user-id= : Filter by user ID}
                             {--period= : Filter by aggregation period (day|week|month|quarter|year)}
@@ -62,7 +62,7 @@ class CacheAggregationsCommand extends Command
     private function warmupCache(): int
     {
         $this->info("Cache warmup not yet implemented - aggregations are computed on-demand");
-        $this->line("To enable caching, set MEMBER_REWARDS_CACHE_TTL in .env");
+        $this->line("To enable caching, set MEMBER_ENGAGEMENT_CACHE_TTL in .env");
 
         return self::SUCCESS;
     }

@@ -1,6 +1,6 @@
 {
-  "name": "rci/member-rewards",
-  "description": "SeAT Member Rewards Programme - Track corporation member activity across mining, PvP, and tax contributions",
+  "name": "rci/member-engagement",
+  "description": "SeAT Member Engagement Module - Track corporation member activity across mining, PvP, and tax contributions",
   "type": "seat-plugin",
   "license": "MIT",
   "authors": [
@@ -16,14 +16,14 @@
   },
   "autoload": {
     "psr-4": {
-      "RCI\\MemberRewards\\": "src/",
-      "RCI\\MemberRewards\\Database\\": "database/"
+      "RCI\\MemberEngagement\\": "src/",
+      "RCI\\MemberEngagement\\Database\\": "database/"
     }
   },
   "extra": {
     "laravel": {
       "providers": [
-        "RCI\\MemberRewards\\MemberRewardsServiceProvider"
+        "RCI\\MemberEngagement\\MemberEngagementServiceProvider"
       ]
     }
   },

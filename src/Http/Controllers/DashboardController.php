@@ -1,10 +1,10 @@
 <?php
 
-namespace RCI\MemberRewards\Http\Controllers;
+namespace RCI\MemberEngagement\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use RCI\MemberRewards\Models\Activity;
+use RCI\MemberEngagement\Models\Activity;
 use Carbon\Carbon;
 
 class DashboardController
@@ -13,12 +13,12 @@ class DashboardController
     {
         $user = Auth::user();
 
-        if (!$user->can('member-rewards.view_own_activities')) {
+        if (!$user->can('member-engagement.view_own_activities')) {
             abort(403, 'Unauthorized');
         }
 
         $timeWindow = $request->query('window', 'month');
-        $days = config('member-rewards.time_windows.' . $timeWindow, 30);
+        $days = config('member-engagement.time_windows.' . $timeWindow, 30);
 
         $activities = Activity::where('activity_timestamp', '>=', Carbon::now()->subDays($days))
             ->orderBy('activity_timestamp', 'desc')
@@ -36,7 +36,7 @@ class DashboardController
             $activity->character_name = $charNames[$activity->character_id] ?? null;
         }
 
-        return view('member-rewards::dashboard.member', [
+        return view('member-engagement::dashboard.member', [
             'activities' => $activities,
             'timeWindow' => $timeWindow,
         ]);

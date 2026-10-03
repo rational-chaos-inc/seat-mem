@@ -1,36 +1,36 @@
 <?php
 
 return [
-    'member-rewards' => [
+    'member-engagement' => [
         'permission' => 'view_own_activities',
-        'name' => 'Member Rewards',
+        'name' => 'Member Engagement Module',
         'icon' => 'fas fa-chart-bar',
-        'route_segment' => 'member-rewards',
+        'route_segment' => 'member-engagement',
         'entries' => [
             [
                 'name' => 'My Activities',
                 'icon' => 'fas fa-chart-line',
-                'route' => 'member-rewards.dashboard',
+                'route' => 'member-engagement.dashboard',
                 'permission' => 'view_own_activities',
             ],
         ],
     ],
-    'member-rewards-director' => [
+    'member-engagement-director' => [
         'permission' => 'view_all_activities',
-        'name' => 'Member Rewards (Director)',
+        'name' => 'Member Engagement Module (Director)',
         'icon' => 'fas fa-crown',
-        'route_segment' => 'member-rewards-director',
+        'route_segment' => 'member-engagement-director',
         'entries' => [
             [
                 'name' => 'Corporation Dashboard',
                 'icon' => 'fas fa-chart-area',
-                'route' => 'member-rewards.director.index',
+                'route' => 'member-engagement.director.index',
                 'permission' => 'view_all_activities',
             ],
             [
                 'name' => 'League Tables',
                 'icon' => 'fas fa-trophy',
-                'route' => 'member-rewards.league-tables',
+                'route' => 'member-engagement.league-tables',
                 'permission' => 'view_all_activities',
             ],
         ],

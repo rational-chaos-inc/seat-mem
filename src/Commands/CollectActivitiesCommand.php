@@ -1,21 +1,21 @@
 <?php
 
-namespace RCI\MemberRewards\Commands;
+namespace RCI\MemberEngagement\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
-use RCI\MemberRewards\Jobs\CollectActivitiesJob;
+use RCI\MemberEngagement\Jobs\CollectActivitiesJob;
 use Seat\Eveapi\Models\Character\CharacterInfo;
 
 class CollectActivitiesCommand extends Command
 {
-    protected $signature = 'member-rewards:collect-activities {corporation_id?}';
+    protected $signature = 'member-engagement:collect-activities {corporation_id?}';
 
     protected $description = 'Collect activity data (kills/losses, mining, tax wallet) for corporation members';
 
     public function handle(): int
     {
-        Log::info("Member Rewards activity collection started");
+        Log::info("Member Engagement Module activity collection started");
 
         try {
             $corporationId = $this->argument('corporation_id');
@@ -28,10 +28,10 @@ class CollectActivitiesCommand extends Command
                 $this->collectForAllCorporations();
             }
 
-            Log::info("Member Rewards activity collection completed");
+            Log::info("Member Engagement Module activity collection completed");
             return self::SUCCESS;
         } catch (\Exception $e) {
-            Log::error("Member Rewards activity collection failed", [
+            Log::error("Member Engagement Module activity collection failed", [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

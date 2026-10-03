@@ -1,11 +1,11 @@
 <?php
 
-namespace RCI\MemberRewards\Services;
+namespace RCI\MemberEngagement\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use RCI\MemberRewards\Models\Activity;
-use RCI\MemberRewards\Models\DailyMemberStat;
+use RCI\MemberEngagement\Models\Activity;
+use RCI\MemberEngagement\Models\DailyMemberStat;
 
 class AggregationService
 {

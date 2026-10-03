@@ -1,11 +1,11 @@
 <?php
 
-namespace RCI\MemberRewards\Http\Controllers\Api;
+namespace RCI\MemberEngagement\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use RCI\MemberRewards\Models\Activity;
+use RCI\MemberEngagement\Models\Activity;
 
 class ActivityApiController
 {
@@ -37,7 +37,7 @@ class ActivityApiController
             }
 
             // Filter by type if requested
-            if ($type && in_array($type, config('member-rewards.activity_types', []))) {
+            if ($type && in_array($type, config('member-engagement.activity_types', []))) {
                 $query->where('activity_type', $type);
             }
 

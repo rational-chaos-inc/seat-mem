@@ -1,14 +1,14 @@
 <?php
 
-namespace RCI\MemberRewards\Commands;
+namespace RCI\MemberEngagement\Commands;
 
 use Illuminate\Console\Command;
-use RCI\MemberRewards\Services\DataCollectionService;
+use RCI\MemberEngagement\Services\DataCollectionService;
 use Carbon\Carbon;
 
 class SyncActivitiesCommand extends Command
 {
-    protected $signature = 'member-rewards:sync {--days=90 : Days back to sync}';
+    protected $signature = 'member-engagement:sync {--days=90 : Days back to sync}';
 
     protected $description = 'Sync member activities from SeAT data sources';
 

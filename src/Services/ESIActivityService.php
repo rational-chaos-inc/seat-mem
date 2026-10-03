@@ -1,11 +1,11 @@
 <?php
 
-namespace RCI\MemberRewards\Services;
+namespace RCI\MemberEngagement\Services;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use RCI\MemberRewards\Models\Activity;
+use RCI\MemberEngagement\Models\Activity;
 use Seat\Eveapi\Models\Character\CharacterInfo;
 
 class ESIActivityService

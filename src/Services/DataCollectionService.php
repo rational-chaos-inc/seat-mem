@@ -1,11 +1,11 @@
 <?php
 
-namespace RCI\MemberRewards\Services;
+namespace RCI\MemberEngagement\Services;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use RCI\MemberRewards\Models\Activity;
+use RCI\MemberEngagement\Models\Activity;
 use Seat\Eveapi\Models\Industry\CharacterMining;
 use Seat\Eveapi\Models\Wallet\CorporationWalletJournal;
 
