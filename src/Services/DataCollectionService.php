@@ -17,7 +17,8 @@ class DataCollectionService
             'mining' => $this->collectMiningData($since),
             'kills' => $this->collectKillData($since),
             'losses' => $this->collectLossData($since),
-            'tax' => $this->collectTaxData($since),
+            'pve_bounty_tax' => $this->collectPveBountyTaxData($since),
+            'industry_tax' => $this->collectIndustryTaxData($since),
         ];
 
         return $results;
@@ -191,7 +192,7 @@ class DataCollectionService
      */
     private const CHARACTER_PAYOUT_REF_TYPES = ['bounty_prizes', 'daily_goal_payouts'];
 
-    private function collectTaxData(?Carbon $since = null): int
+    private function collectPveBountyTaxData(?Carbon $since = null): int
     {
         $count = 0;
 
@@ -227,7 +228,7 @@ class DataCollectionService
                 Activity::updateOrCreate(
                     ['source_id' => $sourceId],
                     [
-                        'activity_type' => 'tax_wallet',
+                        'activity_type' => 'pve_bounty_tax',
                         'character_id' => $characterId,
                         'corporation_id' => $entry->corporation_id,
                         'activity_timestamp' => $entry->date,
@@ -242,9 +243,84 @@ class DataCollectionService
                 $count++;
             }
 
-            Log::info("Collected {$count} tax/bounty activities");
+            Log::info("Collected {$count} PvE bounty/tax activities");
         } catch (\Exception $e) {
-            Log::error("Error collecting tax data", ['error' => $e->getMessage()]);
+            Log::error("Error collecting PvE bounty/tax data", ['error' => $e->getMessage()]);
+        }
+
+        return $count;
+    }
+
+    /**
+     * Industry facility tax entries (ref_type industry_job_tax) are between two
+     * corporations (first_party_id/second_party_id are both corporation IDs, not
+     * characters), so there's no character to attribute directly from the wallet
+     * entry itself. The description includes the originating Job ID though
+     * ("Industry facility tax between X and Y (Job ID: 123456)"), which we cross-
+     * reference against corporation_industry_jobs.installer_id to find the
+     * character who actually ran the job. SeAT's local job cache only retains a
+     * limited window of jobs, so older tax entries may not resolve - those are
+     * skipped rather than attributed to the wrong (or no) character.
+     */
+    private function collectIndustryTaxData(?Carbon $since = null): int
+    {
+        $count = 0;
+
+        try {
+            if (!$since) {
+                $since = Carbon::now()->subDays(90);
+            }
+
+            $entries = CorporationWalletJournal::where('date', '>=', $since)
+                ->where('ref_type', 'industry_job_tax')
+                ->orderBy('date', 'desc')
+                ->get();
+
+            $jobIds = [];
+            foreach ($entries as $entry) {
+                if ($entry->description && preg_match('/Job ID:\s*(\d+)/', $entry->description, $matches)) {
+                    $jobIds[] = (int) $matches[1];
+                }
+            }
+
+            $installerByJobId = DB::table('corporation_industry_jobs')
+                ->whereIn('job_id', array_unique($jobIds))
+                ->pluck('installer_id', 'job_id');
+
+            foreach ($entries as $entry) {
+                if (!$entry->description || !preg_match('/Job ID:\s*(\d+)/', $entry->description, $matches)) {
+                    continue;
+                }
+
+                $jobId = (int) $matches[1];
+                $characterId = $installerByJobId[$jobId] ?? null;
+                if (!$characterId) {
+                    continue;
+                }
+
+                $sourceId = "wallet_{$entry->id}";
+
+                Activity::updateOrCreate(
+                    ['source_id' => $sourceId],
+                    [
+                        'activity_type' => 'industry_tax',
+                        'character_id' => $characterId,
+                        'corporation_id' => $entry->corporation_id,
+                        'activity_timestamp' => $entry->date,
+                        'metadata' => [
+                            'amount' => abs($entry->amount ?? 0),
+                            'ref_type' => $entry->ref_type,
+                            'description' => $entry->description,
+                            'job_id' => $jobId,
+                        ],
+                    ]
+                );
+                $count++;
+            }
+
+            Log::info("Collected {$count} industry tax activities");
+        } catch (\Exception $e) {
+            Log::error("Error collecting industry tax data", ['error' => $e->getMessage()]);
         }
 
         return $count;

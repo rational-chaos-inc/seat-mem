@@ -6,9 +6,12 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use RCI\MemberEngagement\Models\Activity;
 use RCI\MemberEngagement\Models\DailyMemberStat;
+use RCI\MemberEngagement\Models\MemberEngagementSetting;
 
 class AggregationService
 {
+    private const DEFAULT_FLEET_MIN_SIZE = 5;
+
     public function aggregateDay(Carbon $date, ?int $corporationId = null): int
     {
         $startOfDay = $date->copy()->startOfDay();
@@ -33,6 +36,13 @@ class AggregationService
             ->pluck('character_id')
             ->toArray();
 
+        // Each corporation may configure its own minimum fleet size for the
+        // Fleet Participation metric; fall back to the default when a
+        // corporation has no settings row yet.
+        $fleetMinSizeByCorp = MemberEngagementSetting::whereIn('corporation_id', $corpIds)
+            ->whereNotNull('fleet_participation_min_size')
+            ->pluck('fleet_participation_min_size', 'corporation_id');
+
         // Group by corporation and character
         $grouped = $activities->groupBy(function ($activity) {
             return $activity->corporation_id . '|' . $activity->character_id;
@@ -49,7 +59,8 @@ class AggregationService
                 'logged_in' => in_array($charId, $loginData) || $groupedActivities->count() > 0,
                 'mining_quantity' => 0,
                 'mining_value' => 0,
-                'tax_bounty_amount' => 0,
+                'pve_bounty_amount' => 0,
+                'industry_tax_amount' => 0,
                 'pvp_kills' => 0,
                 'pvp_losses' => 0,
                 'fleet_participation' => 0,
@@ -59,15 +70,18 @@ class AggregationService
             foreach ($groupedActivities as $activity) {
                 match ($activity->activity_type) {
                     'mining' => $stats['mining_quantity'] += $activity->metadata['quantity'] ?? 0,
-                    'tax_wallet' => $stats['tax_bounty_amount'] += $activity->metadata['amount'] ?? 0,
+                    'pve_bounty_tax' => $stats['pve_bounty_amount'] += $activity->metadata['amount'] ?? 0,
+                    'industry_tax' => $stats['industry_tax_amount'] += $activity->metadata['amount'] ?? 0,
                     'pvp_kill' => $stats['pvp_kills'] += 1,
                     'pvp_loss' => $stats['pvp_losses'] += 1,
                     default => null,
                 };
             }
 
-            // Fleet participation: killmails with 5+ total attackers, deduplicated to 1 per hour
-            $stats['fleet_participation'] = $this->countFleetParticipationByHour($groupedActivities);
+            // Fleet participation: killmails with N+ total attackers (per-corp
+            // configurable minimum), deduplicated to 1 per hour
+            $fleetMinSize = $fleetMinSizeByCorp[$corpId] ?? self::DEFAULT_FLEET_MIN_SIZE;
+            $stats['fleet_participation'] = $this->countFleetParticipationByHour($groupedActivities, $fleetMinSize);
 
             DailyMemberStat::updateOrCreate(
                 [
@@ -84,11 +98,11 @@ class AggregationService
         return $count;
     }
 
-    private function countFleetParticipationByHour($activities): int
+    private function countFleetParticipationByHour($activities, int $minSize): int
     {
-        $fleetKills = $activities->filter(function ($activity) {
+        $fleetKills = $activities->filter(function ($activity) use ($minSize) {
             return $activity->activity_type === 'pvp_kill'
-                && ($activity->metadata['attacker_count'] ?? 1) >= 5;
+                && ($activity->metadata['attacker_count'] ?? 1) >= $minSize;
         });
 
         $hourBuckets = [];

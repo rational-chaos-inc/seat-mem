@@ -17,6 +17,7 @@ return [
         'mining',
         'pvp_kill',
         'pvp_loss',
-        'tax_wallet',
+        'pve_bounty_tax',
+        'industry_tax',
     ],
 ];

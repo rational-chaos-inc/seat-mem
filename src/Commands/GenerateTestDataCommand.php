@@ -15,7 +15,7 @@ class GenerateTestDataCommand extends Command
     public function handle(): int
     {
         $count = (int) $this->argument('count');
-        $types = ['mining', 'pvp_kill', 'pvp_loss', 'tax_wallet'];
+        $types = ['mining', 'pvp_kill', 'pvp_loss', 'pve_bounty_tax', 'industry_tax'];
         $characterIds = [227993904, 227993905, 227993906];
         $corporationId = 98765432;
 
@@ -49,18 +49,21 @@ class GenerateTestDataCommand extends Command
                 'ore_type' => 'Veldspar',
             ],
             'pvp_kill' => [
-                'victim_name' => 'Test Victim',
-                'ship_type' => 'Rifter',
-                'value' => random_int(500000, 5000000),
+                'victim_character_id' => 227993999,
+                'ship_type_id' => 587,
+                'attacker_count' => random_int(1, 10),
             ],
             'pvp_loss' => [
-                'killer_name' => 'Test Killer',
-                'ship_type' => 'Rifter',
-                'loss_value' => random_int(500000, 5000000),
+                'final_blow_by' => 227993999,
+                'ship_type_id' => 587,
             ],
-            'tax_wallet' => [
+            'pve_bounty_tax' => [
                 'amount' => random_int(1000000, 10000000),
-                'reason' => 'NPC Bounty',
+                'ref_type' => 'bounty_prizes',
+            ],
+            'industry_tax' => [
+                'amount' => random_int(100000, 5000000),
+                'ref_type' => 'industry_job_tax',
             ],
             default => [],
         };

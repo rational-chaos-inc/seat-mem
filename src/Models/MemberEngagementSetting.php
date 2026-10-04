@@ -13,19 +13,24 @@ class MemberEngagementSetting extends Model
         'user_id',
         'login_visibility',
         'mining_visibility',
-        'tax_bounty_visibility',
+        'pve_bounty_visibility',
+        'industry_tax_visibility',
         'pvp_visibility',
         'fleet_participation_visibility',
         'mining_weight',
-        'tax_bounty_weight',
+        'pve_bounty_weight',
+        'industry_tax_weight',
         'pvp_weight',
         'fleet_participation_weight',
+        'fleet_participation_min_size',
     ];
 
     protected $casts = [
         'mining_weight' => 'decimal:2',
-        'tax_bounty_weight' => 'decimal:2',
+        'pve_bounty_weight' => 'decimal:2',
+        'industry_tax_weight' => 'decimal:2',
         'pvp_weight' => 'decimal:2',
         'fleet_participation_weight' => 'decimal:2',
+        'fleet_participation_min_size' => 'integer',
     ];
 }

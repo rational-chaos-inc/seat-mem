@@ -36,6 +36,7 @@
                                             <th>Metric</th>
                                             <th style="width: 300px;">Visibility</th>
                                             <th style="width: 120px;">Weight (0-10)</th>
+                                            <th style="width: 100px;">Min Fleet Size</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -69,6 +70,7 @@
                                                     value="{{ $setting ? $setting->mining_weight : 1.0 }}"
                                                     style="display: none;">
                                             </td>
+                                            <td></td>
                                         </tr>
 
                                         <!-- Mining Activity -->
@@ -100,37 +102,71 @@
                                                     name="mining_weight"
                                                     value="{{ $setting ? $setting->mining_weight : 1.0 }}">
                                             </td>
+                                            <td></td>
                                         </tr>
 
-                                        <!-- Tax/Bounty -->
+                                        <!-- PvE Bounty & Tax -->
                                         <tr>
                                             <td>
-                                                <strong>Tax/Bounty Contributions</strong>
-                                                <div class="small text-muted">Bounties and taxes paid to corp</div>
+                                                <strong>PvE Bounty &amp; Tax</strong>
+                                                <div class="small text-muted">Bounty prizes and daily goal payouts</div>
                                             </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm" role="group">
-                                                    <input type="radio" class="btn-check" name="tax_bounty_visibility" value="directors"
-                                                        {{ $setting && $setting->tax_bounty_visibility === 'directors' ? 'checked' : '' }}
-                                                        id="tax_directors_{{ $corp->corporation_id }}">
-                                                    <label class="btn btn-outline-secondary" for="tax_directors_{{ $corp->corporation_id }}">Directors</label>
+                                                    <input type="radio" class="btn-check" name="pve_bounty_visibility" value="directors"
+                                                        {{ $setting && $setting->pve_bounty_visibility === 'directors' ? 'checked' : '' }}
+                                                        id="pve_bounty_directors_{{ $corp->corporation_id }}">
+                                                    <label class="btn btn-outline-secondary" for="pve_bounty_directors_{{ $corp->corporation_id }}">Directors</label>
 
-                                                    <input type="radio" class="btn-check" name="tax_bounty_visibility" value="members"
-                                                        {{ $setting && $setting->tax_bounty_visibility === 'members' ? 'checked' : '' }}
-                                                        id="tax_members_{{ $corp->corporation_id }}">
-                                                    <label class="btn btn-outline-secondary" for="tax_members_{{ $corp->corporation_id }}">Members</label>
+                                                    <input type="radio" class="btn-check" name="pve_bounty_visibility" value="members"
+                                                        {{ $setting && $setting->pve_bounty_visibility === 'members' ? 'checked' : '' }}
+                                                        id="pve_bounty_members_{{ $corp->corporation_id }}">
+                                                    <label class="btn btn-outline-secondary" for="pve_bounty_members_{{ $corp->corporation_id }}">Members</label>
 
-                                                    <input type="radio" class="btn-check" name="tax_bounty_visibility" value="both"
-                                                        {{ $setting && $setting->tax_bounty_visibility === 'both' ? 'checked' : '' }}
-                                                        id="tax_both_{{ $corp->corporation_id }}">
-                                                    <label class="btn btn-outline-secondary" for="tax_both_{{ $corp->corporation_id }}">Both</label>
+                                                    <input type="radio" class="btn-check" name="pve_bounty_visibility" value="both"
+                                                        {{ $setting && $setting->pve_bounty_visibility === 'both' ? 'checked' : '' }}
+                                                        id="pve_bounty_both_{{ $corp->corporation_id }}">
+                                                    <label class="btn btn-outline-secondary" for="pve_bounty_both_{{ $corp->corporation_id }}">Both</label>
                                                 </div>
                                             </td>
                                             <td>
                                                 <input type="number" step="0.1" min="0" max="10" class="form-control form-control-sm"
-                                                    name="tax_bounty_weight"
-                                                    value="{{ $setting ? $setting->tax_bounty_weight : 1.0 }}">
+                                                    name="pve_bounty_weight"
+                                                    value="{{ $setting ? $setting->pve_bounty_weight : 1.0 }}">
                                             </td>
+                                            <td></td>
+                                        </tr>
+
+                                        <!-- Industry Tax -->
+                                        <tr>
+                                            <td>
+                                                <strong>Industry Tax</strong>
+                                                <div class="small text-muted">Facility tax from industry jobs</div>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <input type="radio" class="btn-check" name="industry_tax_visibility" value="directors"
+                                                        {{ $setting && $setting->industry_tax_visibility === 'directors' ? 'checked' : '' }}
+                                                        id="industry_tax_directors_{{ $corp->corporation_id }}">
+                                                    <label class="btn btn-outline-secondary" for="industry_tax_directors_{{ $corp->corporation_id }}">Directors</label>
+
+                                                    <input type="radio" class="btn-check" name="industry_tax_visibility" value="members"
+                                                        {{ $setting && $setting->industry_tax_visibility === 'members' ? 'checked' : '' }}
+                                                        id="industry_tax_members_{{ $corp->corporation_id }}">
+                                                    <label class="btn btn-outline-secondary" for="industry_tax_members_{{ $corp->corporation_id }}">Members</label>
+
+                                                    <input type="radio" class="btn-check" name="industry_tax_visibility" value="both"
+                                                        {{ $setting && $setting->industry_tax_visibility === 'both' ? 'checked' : '' }}
+                                                        id="industry_tax_both_{{ $corp->corporation_id }}">
+                                                    <label class="btn btn-outline-secondary" for="industry_tax_both_{{ $corp->corporation_id }}">Both</label>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <input type="number" step="0.1" min="0" max="10" class="form-control form-control-sm"
+                                                    name="industry_tax_weight"
+                                                    value="{{ $setting ? $setting->industry_tax_weight : 1.0 }}">
+                                            </td>
+                                            <td></td>
                                         </tr>
 
                                         <!-- PvP Activity -->
@@ -162,13 +198,14 @@
                                                     name="pvp_weight"
                                                     value="{{ $setting ? $setting->pvp_weight : 1.0 }}">
                                             </td>
+                                            <td></td>
                                         </tr>
 
                                         <!-- Fleet Participation -->
                                         <tr>
                                             <td>
                                                 <strong>Fleet Participation</strong>
-                                                <div class="small text-muted">Kills with 5+ fleet members</div>
+                                                <div class="small text-muted">Kills with N+ fleet members</div>
                                             </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm" role="group">
@@ -192,6 +229,11 @@
                                                 <input type="number" step="0.1" min="0" max="10" class="form-control form-control-sm"
                                                     name="fleet_participation_weight"
                                                     value="{{ $setting ? $setting->fleet_participation_weight : 1.0 }}">
+                                            </td>
+                                            <td>
+                                                <input type="number" step="1" min="1" max="100" class="form-control form-control-sm"
+                                                    name="fleet_participation_min_size"
+                                                    value="{{ $setting ? $setting->fleet_participation_min_size : 5 }}">
                                             </td>
                                         </tr>
                                     </tbody>

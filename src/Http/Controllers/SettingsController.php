@@ -30,13 +30,16 @@ class SettingsController
                 [
                     'login_visibility' => 'directors',
                     'mining_visibility' => 'directors',
-                    'tax_bounty_visibility' => 'directors',
+                    'pve_bounty_visibility' => 'directors',
+                    'industry_tax_visibility' => 'directors',
                     'pvp_visibility' => 'directors',
                     'fleet_participation_visibility' => 'directors',
                     'mining_weight' => 1.0,
-                    'tax_bounty_weight' => 1.0,
+                    'pve_bounty_weight' => 1.0,
+                    'industry_tax_weight' => 1.0,
                     'pvp_weight' => 1.0,
                     'fleet_participation_weight' => 1.0,
+                    'fleet_participation_min_size' => 5,
                 ]
             );
             $settings[$corp->corporation_id] = $setting;
@@ -60,13 +63,16 @@ class SettingsController
             'corporation_id' => 'required|integer',
             'login_visibility' => 'required|in:directors,members,both',
             'mining_visibility' => 'required|in:directors,members,both',
-            'tax_bounty_visibility' => 'required|in:directors,members,both',
+            'pve_bounty_visibility' => 'required|in:directors,members,both',
+            'industry_tax_visibility' => 'required|in:directors,members,both',
             'pvp_visibility' => 'required|in:directors,members,both',
             'fleet_participation_visibility' => 'required|in:directors,members,both',
             'mining_weight' => 'required|numeric|min:0|max:10',
-            'tax_bounty_weight' => 'required|numeric|min:0|max:10',
+            'pve_bounty_weight' => 'required|numeric|min:0|max:10',
+            'industry_tax_weight' => 'required|numeric|min:0|max:10',
             'pvp_weight' => 'required|numeric|min:0|max:10',
             'fleet_participation_weight' => 'required|numeric|min:0|max:10',
+            'fleet_participation_min_size' => 'required|integer|min:1|max:100',
         ]);
 
         MemberEngagementSetting::updateOrCreate(
@@ -77,13 +83,16 @@ class SettingsController
             [
                 'login_visibility' => $validated['login_visibility'],
                 'mining_visibility' => $validated['mining_visibility'],
-                'tax_bounty_visibility' => $validated['tax_bounty_visibility'],
+                'pve_bounty_visibility' => $validated['pve_bounty_visibility'],
+                'industry_tax_visibility' => $validated['industry_tax_visibility'],
                 'pvp_visibility' => $validated['pvp_visibility'],
                 'fleet_participation_visibility' => $validated['fleet_participation_visibility'],
                 'mining_weight' => (float) $validated['mining_weight'],
-                'tax_bounty_weight' => (float) $validated['tax_bounty_weight'],
+                'pve_bounty_weight' => (float) $validated['pve_bounty_weight'],
+                'industry_tax_weight' => (float) $validated['industry_tax_weight'],
                 'pvp_weight' => (float) $validated['pvp_weight'],
                 'fleet_participation_weight' => (float) $validated['fleet_participation_weight'],
+                'fleet_participation_min_size' => (int) $validated['fleet_participation_min_size'],
             ]
         );
 
