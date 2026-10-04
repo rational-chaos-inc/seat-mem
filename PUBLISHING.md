@@ -21,7 +21,7 @@ git push origin v1.0.0
 ```
 
 Or create via GitHub UI:
-1. Go to: https://github.com/rational-chaos-inc/seat-mep/releases
+1. Go to: https://github.com/rational-chaos-inc/seat-mem/releases
 2. Click "Create a new release"
 3. Tag: `v1.0.0`
 4. Title: `Initial Release`
@@ -34,7 +34,7 @@ Or create via GitHub UI:
 2. Click "Sign up" or "Sign in with GitHub"
 3. Authorize GitHub access
 4. After login, click "Submit a Package"
-5. Enter repository URL: `https://github.com/rational-chaos-inc/seat-mep.git`
+5. Enter repository URL: `https://github.com/rational-chaos-inc/seat-mem.git`
 6. Click "Check"
 7. Click "Submit"
 

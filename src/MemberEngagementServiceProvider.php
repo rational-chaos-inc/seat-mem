@@ -16,7 +16,7 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
 
     public function getPackageRepositoryUrl(): string
     {
-        return 'https://github.com/rational-chaos-inc/seat-mep';
+        return 'https://github.com/rational-chaos-inc/seat-mem';
     }
 
     public function getPackagistPackageName(): string
