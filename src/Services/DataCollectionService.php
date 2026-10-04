@@ -85,6 +85,7 @@ class DataCollectionService
                     'killmail_details.killmail_id',
                     'killmail_details.killmail_time',
                     'killmail_attackers.character_id as attacker_character_id',
+                    'killmail_attackers.corporation_id as attacker_corporation_id',
                     'killmail_victims.character_id as victim_character_id',
                     'killmail_victims.ship_type_id'
                 )
@@ -103,6 +104,7 @@ class DataCollectionService
                     [
                         'activity_type' => 'pvp_kill',
                         'character_id' => $kill->attacker_character_id,
+                        'corporation_id' => $kill->attacker_corporation_id,
                         'activity_timestamp' => $kill->killmail_time,
                         'metadata' => [
                             'killmail_id' => $kill->killmail_id,
@@ -134,12 +136,16 @@ class DataCollectionService
 
             $losses = DB::table('killmail_details')
                 ->join('killmail_victims', 'killmail_details.killmail_id', '=', 'killmail_victims.killmail_id')
-                ->join('killmail_attackers', 'killmail_details.killmail_id', '=', 'killmail_attackers.killmail_id', 'left')
+                ->leftJoin('killmail_attackers', function ($join) {
+                    $join->on('killmail_details.killmail_id', '=', 'killmail_attackers.killmail_id')
+                        ->where('killmail_attackers.final_blow', '=', 1);
+                })
                 ->where('killmail_details.killmail_time', '>=', $since)
                 ->select(
                     'killmail_details.killmail_id',
                     'killmail_details.killmail_time',
                     'killmail_victims.character_id as victim_character_id',
+                    'killmail_victims.corporation_id as victim_corporation_id',
                     'killmail_victims.ship_type_id',
                     'killmail_attackers.character_id as final_blow_by'
                 )
@@ -158,6 +164,7 @@ class DataCollectionService
                     [
                         'activity_type' => 'pvp_loss',
                         'character_id' => $loss->victim_character_id,
+                        'corporation_id' => $loss->victim_corporation_id,
                         'activity_timestamp' => $loss->killmail_time,
                         'metadata' => [
                             'killmail_id' => $loss->killmail_id,
