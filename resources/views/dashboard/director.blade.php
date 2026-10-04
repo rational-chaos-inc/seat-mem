@@ -35,7 +35,6 @@
                                 <tr>
                                     <th>Date</th>
                                     <th>Character</th>
-                                    <th>Corp</th>
                                     <th>Type</th>
                                     <th>Details</th>
                                 </tr>
@@ -44,8 +43,7 @@
                                 @foreach($activities as $activity)
                                     <tr>
                                         <td>{{ $activity->activity_timestamp->format('Y-m-d H:i') }}</td>
-                                        <td>{{ $activity->character_name ?? 'Unknown (' . $activity->character_id . ')' }}</td>
-                                        <td>{{ $activity->corporation_name ?? 'Unknown' }}</td>
+                                        <td>{{ $activity->display_name }}</td>
                                         <td><span class="label label-primary">{{ $activity->activity_type }}</span></td>
                                         <td>
                                             @if($activity->metadata)

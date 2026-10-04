@@ -5,10 +5,16 @@ namespace RCI\MemberEngagement\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use RCI\MemberEngagement\Models\Activity;
+use RCI\MemberEngagement\Services\EntityResolutionService;
 use Carbon\Carbon;
 
 class DashboardController
 {
+    public function __construct(
+        private EntityResolutionService $entityResolution,
+    ) {
+    }
+
     public function member(Request $request)
     {
         $user = Auth::user();
@@ -25,18 +31,7 @@ class DashboardController
             ->limit(100)
             ->get();
 
-        // Batch load character names
-        $charIds = $activities->pluck('character_id')->filter()->unique();
-
-        $charNames = \DB::table('character_infos')
-            ->whereIn('character_id', $charIds)
-            ->pluck('name', 'character_id');
-
-        foreach ($activities as $activity) {
-            $activity->character_name = $charNames[$activity->character_id]
-                ?? $activity->metadata['character_name']
-                ?? null;
-        }
+        $this->entityResolution->attachDisplayNames($activities);
 
         return view('member-engagement::dashboard.member', [
             'activities' => $activities,

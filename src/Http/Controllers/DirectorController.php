@@ -5,10 +5,16 @@ namespace RCI\MemberEngagement\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use RCI\MemberEngagement\Models\Activity;
+use RCI\MemberEngagement\Services\EntityResolutionService;
 use Carbon\Carbon;
 
 class DirectorController
 {
+    public function __construct(
+        private EntityResolutionService $entityResolution,
+    ) {
+    }
+
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -25,24 +31,7 @@ class DirectorController
             ->limit(100)
             ->get();
 
-        // Batch load character and corporation names
-        $charIds = $activities->pluck('character_id')->filter()->unique();
-        $corpIds = $activities->pluck('corporation_id')->filter()->unique();
-
-        $charNames = \DB::table('character_infos')
-            ->whereIn('character_id', $charIds)
-            ->pluck('name', 'character_id');
-
-        $corpNames = \DB::table('corporation_infos')
-            ->whereIn('corporation_id', $corpIds)
-            ->pluck('name', 'corporation_id');
-
-        foreach ($activities as $activity) {
-            $activity->character_name = $charNames[$activity->character_id]
-                ?? $activity->metadata['character_name']
-                ?? null;
-            $activity->corporation_name = $corpNames[$activity->corporation_id] ?? null;
-        }
+        $this->entityResolution->attachDisplayNames($activities);
 
         return view('member-engagement::dashboard.director', [
             'activities' => $activities,

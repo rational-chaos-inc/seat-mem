@@ -5,6 +5,7 @@ namespace RCI\MemberEngagement;
 use Seat\Services\AbstractSeatPlugin;
 use RCI\MemberEngagement\Services\AggregationService;
 use RCI\MemberEngagement\Services\DataCollectionService;
+use RCI\MemberEngagement\Services\EntityResolutionService;
 
 class MemberEngagementServiceProvider extends AbstractSeatPlugin
 {
@@ -52,6 +53,7 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
     {
         $this->app->singleton(DataCollectionService::class);
         $this->app->singleton(AggregationService::class);
+        $this->app->singleton(EntityResolutionService::class);
     }
 
     private function publishConfig(): void
@@ -88,6 +90,7 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
             \RCI\MemberEngagement\Commands\SyncActivitiesCommand::class,
             \RCI\MemberEngagement\Commands\AggregateStatsCommand::class,
             \RCI\MemberEngagement\Commands\GenerateTestDataCommand::class,
+            \RCI\MemberEngagement\Commands\ResolveNamesCommand::class,
         ]);
     }
 

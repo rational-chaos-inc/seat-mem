@@ -28,6 +28,14 @@ class ScheduleSeeder extends AbstractScheduleSeeder
                 'ping_before' => null,
                 'ping_after' => null,
             ],
+            [
+                'command' => 'member-engagement:resolve-names --limit=1000',
+                'expression' => '*/20 * * * *',  // Every 20 minutes
+                'allow_overlap' => false,
+                'allow_maintenance' => false,
+                'ping_before' => null,
+                'ping_after' => null,
+            ],
         ];
     }
 
