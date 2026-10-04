@@ -49,7 +49,7 @@ pointing at this GitHub repo.
    "repositories": [
        {
            "type": "vcs",
-           "url": "https://github.com/rational-chaos-inc/seat-mrp.git"
+           "url": "https://github.com/rational-chaos-inc/seat-mep.git"
        }
    ]
    ```

@@ -166,7 +166,7 @@ class EntityResolutionService
 
     private function userAgent(): string
     {
-        return 'SeAT-MemberEngagementModule (https://github.com/rational-chaos-inc/seat-mrp; mattallum1974@gmail.com)';
+        return 'SeAT-MemberEngagementModule (https://github.com/rational-chaos-inc/seat-mep; mattallum1974@gmail.com)';
     }
 
     /**
