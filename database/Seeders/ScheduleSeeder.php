@@ -13,16 +13,16 @@ class ScheduleSeeder extends AbstractScheduleSeeder
     {
         return [
             [
-                'command' => 'member-engagement:collect-activities',
-                'expression' => '*/5 * * * *',  // Every 5 minutes
+                'command' => 'member-engagement:sync --days=2',
+                'expression' => '*/15 * * * *',  // Every 15 minutes
                 'allow_overlap' => false,
                 'allow_maintenance' => false,
                 'ping_before' => null,
                 'ping_after' => null,
             ],
             [
-                'command' => 'member-engagement:check-alerts',
-                'expression' => '*/5 * * * *',  // Every 5 minutes
+                'command' => 'member-engagement:aggregate --days=3',
+                'expression' => '*/30 * * * *',  // Every 30 minutes
                 'allow_overlap' => false,
                 'allow_maintenance' => false,
                 'ping_before' => null,
@@ -36,6 +36,9 @@ class ScheduleSeeder extends AbstractScheduleSeeder
      */
     public function getDeprecatedSchedules(): array
     {
-        return [];
+        return [
+            'member-engagement:collect-activities',
+            'member-engagement:check-alerts',
+        ];
     }
 }

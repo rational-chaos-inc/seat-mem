@@ -3,11 +3,8 @@
 namespace RCI\MemberEngagement;
 
 use Seat\Services\AbstractSeatPlugin;
-use RCI\MemberEngagement\Services\ActivityCollectionService;
 use RCI\MemberEngagement\Services\AggregationService;
-use RCI\MemberEngagement\Services\ESIActivityService;
-use RCI\MemberEngagement\Services\TaxWalletActivityService;
-use RCI\MemberEngagement\Services\MiningActivityService;
+use RCI\MemberEngagement\Services\DataCollectionService;
 
 class MemberEngagementServiceProvider extends AbstractSeatPlugin
 {
@@ -53,13 +50,8 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
 
     private function registerServices(): void
     {
-        $this->app->singleton(ESIActivityService::class);
-        $this->app->singleton(TaxWalletActivityService::class);
-        $this->app->singleton(MiningActivityService::class);
-        $this->app->singleton(ActivityCollectionService::class);
+        $this->app->singleton(DataCollectionService::class);
         $this->app->singleton(AggregationService::class);
-        $this->app->singleton(\RCI\MemberEngagement\Services\AlertService::class);
-        $this->app->singleton(\RCI\MemberEngagement\Services\DataCollectionService::class);
     }
 
     private function publishConfig(): void
@@ -79,7 +71,6 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
     private function registerRoutes(): void
     {
         $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
-        $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
     }
 
     private function registerViews(): void
@@ -95,11 +86,8 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
     {
         $this->commands([
             \RCI\MemberEngagement\Commands\SyncActivitiesCommand::class,
-            \RCI\MemberEngagement\Commands\GenerateTestDataCommand::class,
             \RCI\MemberEngagement\Commands\AggregateStatsCommand::class,
-            \RCI\MemberEngagement\Commands\CollectActivitiesCommand::class,
-            \RCI\MemberEngagement\Commands\CacheAggregationsCommand::class,
-            \RCI\MemberEngagement\Commands\CheckAlertsCommand::class,
+            \RCI\MemberEngagement\Commands\GenerateTestDataCommand::class,
         ]);
     }
 
