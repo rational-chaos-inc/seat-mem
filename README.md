@@ -1,36 +1,51 @@
 # SeAT Member Engagement Module
 
-A SeAT plugin for tracking corporation member activity across mining, PvP combat, and tax wallet contributions.
+A SeAT plugin that tracks corporation member activity — mining, PvP kills/losses,
+PvE bounty income, and industry tax — and presents it to directors as a
+corporation-wide activity feed, with per-metric visibility and weighting controls.
 
 ## Features
 
-- Track member activities: mining, PvP kills/losses, tax wallet bounties
-- Aggregate data per user (main character + linked alts)
-- View totals and averages across linked characters
-- Configurable time windows (daily, weekly, monthly, quarterly, yearly)
-- Member dashboard for personal activity tracking
-- Director dashboard with corporation-wide summaries and league tables
-- Member drill-down and search/filter capabilities
-- Activity alerts and target setting
-- Hybrid Manager-Core integration (optional)
+- **Mining** — quantity mined per character, per day
+- **PvP kills / losses** — raw counts, plus a separate "Fleet Participation"
+  metric (kills with N+ attackers, director-configurable minimum, deduplicated
+  to once per hour)
+- **PvE Bounty & Tax** — bounty prizes and daily goal payouts, attributed to
+  the character who earned them
+- **Industry Tax** — facility tax from industry jobs, attributed to the
+  character who ran the job (cross-referenced from the wallet entry's Job ID
+  against SeAT's industry job cache)
+- **Character/corporation/alliance name resolution** — most characters never
+  get a local SeAT record (SeAT only syncs characters that have authenticated
+  directly), so this plugin resolves names via ESI's public endpoints in the
+  background and displays `Character (Corporation) [Alliance]`
+- **Director dashboard** — raw activity feed across the corporation
+- **Settings page** — per-metric visibility (Directors / Members / Both) and
+  weighting, plus the Fleet Participation minimum size, configurable per
+  corporation
+
+The member-facing "My Activities" page currently shows no data by design —
+data collection and the director feed are unaffected.
+
+## Prerequisites
+
+- SeAT 5.x (Laravel 10)
+- PHP 8.1+
+- Corp Wallet Manager (or equivalent) already syncing
+  `corporation_wallet_journals` for the corporation(s) you want to track
+- Killmail and industry job syncing enabled in SeAT (standard SeAT/ESI setup)
+- Outbound HTTPS access from the SeAT containers to `esi.evetech.net` (name
+  resolution calls ESI directly; no API key needed, these are public endpoints)
 
 ## Installation
 
-### Prerequisites
-- SeAT 5.x (Laravel 10)
-- PHP 8.1+
-- Database with migration support
-- Redis or queue driver (for scheduled jobs)
-- EVE Online ESI API access (for kills/losses)
-- Mining-Manager plugin (for mining data) - optional but recommended
+The package isn't on Packagist yet, so install it via a VCS repository
+pointing at this GitHub repo.
 
-### Step-by-Step Installation
+1. **Add the repository and require the package**
 
-1. **Add to your SeAT installation**
-
-   For development/local testing:
-   ```bash
-   # Add to composer.json repositories section
+   In your SeAT installation's `composer.json`:
+   ```json
    "repositories": [
        {
            "type": "vcs",
@@ -38,197 +53,115 @@ A SeAT plugin for tracking corporation member activity across mining, PvP combat
        }
    ]
    ```
-
-   Then install:
    ```bash
    composer require rci/member-engagement
    ```
 
-2. **Publish configuration and views**
-   ```bash
-   php artisan vendor:publish --tag=member-engagement-config
-   php artisan vendor:publish --tag=member-engagement-views
-   ```
+   If you're running the official `eveseat/docker` compose setup, add
+   `rci/member-engagement` to the `SEAT_PLUGINS` env var instead — but note
+   the `repositories` entry above still needs to be present in the image's
+   `composer.json` for that to resolve, since the package isn't on Packagist.
+   The simplest way to do that in the docker setup today is the `packages/`
+   dev-install path it already supports (mount this repo under
+   `packages/member-engagement` and add a `packages/override.json` declaring
+   the autoload/provider) — ask if you want help wiring that up for a
+   specific docker-compose layout.
 
-3. **Run database migrations**
+2. **Run migrations**
    ```bash
    php artisan migrate
    ```
 
-4. **Seed scheduled tasks** (via database seeder)
-   ```bash
-   php artisan db:seed --class="\RCI\MemberEngagement\Database\Seeders\ScheduleSeeder"
-   ```
+3. **Assign permissions**
 
-5. **Configure permissions** (if using role-based access)
-   - Log into SeAT admin panel
-   - Go to: Admin → Permissions & Roles
-   - Assign `view_own_activities` to members
-   - Assign `view_all_activities` to directors
+   Permissions aren't pre-seeded — they appear in SeAT's Access Management
+   once the plugin boots, and get created the first time you save a role with
+   them checked:
+   - SeAT → Settings → Access Management
+   - Assign `member-engagement.view_own_activities` to your member role
+   - Assign `member-engagement.view_all_activities` to your director role
 
-6. **Configure scheduler** (if not already running)
+4. **Configure the Director Settings page**
 
-   Ensure Laravel's task scheduler runs every minute:
-   ```bash
-   * * * * * cd /path/to/seat && php artisan schedule:run >> /dev/null 2>&1
-   ```
+   Visit `/member-engagement/settings` as a director to set per-metric
+   visibility, weighting, and the Fleet Participation minimum size for each
+   corporation. Sensible defaults apply automatically if you skip this.
 
-   Or use the SeAT Scheduler UI if available:
-   - Admin → Scheduler
+Scheduled jobs register themselves automatically (via SeAT's own schedule
+seeding on plugin boot) — no manual seeding step needed.
 
-7. **Verify installation**
-   ```bash
-   # Check if service provider is registered
-   php artisan list | grep member-engagement
+## Routes
 
-   # Verify permissions exist
-   php artisan tinker
-   >>> \Spatie\Permission\Models\Permission::where('name', 'like', '%member-engagement%')->get()
+- **Member Dashboard:** `/member-engagement/dashboard`
+- **Director Dashboard:** `/member-engagement/director` (requires
+  `view_all_activities`)
+- **Settings:** `/member-engagement/settings` (requires `view_all_activities`)
 
-   # Verify schedule is registered (if Manager-Core available)
-   php artisan manager-core:diagnose --detailed
-   ```
+## Scheduled Commands
 
-### Optional: Manager-Core Integration
+Registered automatically once the plugin boots:
 
-To enable real-time activity updates and cross-plugin communication:
+| Command | Schedule | Purpose |
+|---|---|---|
+| `member-engagement:sync --days=2` | every 15 min | Pull new activity from SeAT's locally-synced mining/killmail/wallet data |
+| `member-engagement:aggregate --days=3` | every 30 min | Roll activities up into daily per-character stats |
+| `member-engagement:resolve-names --limit=1000` | every 20 min | Resolve character/corp/alliance names via ESI |
 
-```bash
-composer require seatplus/manager-core
-php artisan migrate
-```
-
-The plugin will auto-detect Manager-Core and enable:
-- Real-time kill/loss detection (~2 minutes vs 20-30 minutes)
-- Mining data via events
-- Cross-plugin alerts
+Each is also runnable manually, e.g. `php artisan member-engagement:sync --days=90`
+for a larger backfill on first install.
 
 ## Configuration
 
-Edit `config/member-engagement.php` to configure:
+`config/member-engagement.php`:
 
 ```php
 return [
     'enabled' => env('MEMBER_ENGAGEMENT_ENABLED', true),
-    'polling_interval' => env('MEMBER_ENGAGEMENT_POLLING_INTERVAL', 5),  // minutes
-    'aggregation_cache_ttl' => env('MEMBER_ENGAGEMENT_CACHE_TTL', 0),     // seconds (0 = disabled)
-    'esi.retry_attempts' => 3,
-    'esi.retry_delay_seconds' => 2,
-    'time_windows' => ['day', 'week', 'month', 'quarter', 'year'],
-    'activity_types' => ['mining', 'pvp_kill', 'pvp_loss', 'tax_wallet'],
-    'manager_core_integration' => true,
-    'alerts.enabled' => true,
-    'alerts.check_interval' => 5,  // minutes
+    'aggregation_cache_ttl' => env('MEMBER_ENGAGEMENT_CACHE_TTL', 0),
+    'time_windows' => ['day' => 1, 'week' => 7, 'month' => 30, 'quarter' => 90, 'year' => 365],
+    'activity_types' => ['mining', 'pvp_kill', 'pvp_loss', 'pve_bounty_tax', 'industry_tax'],
 ];
 ```
 
-## Post-Installation
+## Known Limitations
 
-### Start collecting activities
-Activities begin collecting automatically every 5 minutes via scheduled job. First run should complete within 5 minutes depending on corporation size.
-
-### Monitor collection
-```bash
-# View recent collection logs
-php artisan tinker
->>> \Illuminate\Support\Facades\Log::tail('laravel.log', 50)
-
-# Or via file
-tail -f storage/logs/laravel.log | grep 'member-engagement'
-```
-
-### Access the plugin
-- **Member Dashboard:** `/member-engagement/dashboard`
-- **Director Dashboard:** `/member-engagement/director` (requires `view_all_activities` permission)
-- **League Tables:** `/member-engagement/league-tables`
-- **API:** `/api/member-engagement/...`
-
-## Uninstallation
-
-To remove the plugin:
-
-```bash
-# Disable the plugin from SeAT admin or composer.json
-composer remove rci/member-engagement
-
-# Remove database tables (careful!)
-php artisan migrate:rollback --path=vendor/rci/member-engagement/database/migrations
-```
+- **Industry Tax coverage**: SeAT's local industry job cache only retains a
+  limited window of jobs. Wallet tax entries whose job has aged out of that
+  cache can't be attributed to a character and are skipped (not guessed at).
+- **Name resolution takes time on a fresh install**: at 1000 characters per
+  20-minute cycle, a corporation with several thousand distinct characters in
+  its activity history will take a few hours to fully resolve. Run
+  `php artisan member-engagement:resolve-names --limit=10000` manually for a
+  faster one-time backfill.
+- **Member dashboard shows no data currently** — this is deliberate, not a
+  bug; the director feed and underlying data collection are unaffected.
 
 ## Troubleshooting
 
-**Activities not collecting:**
-- Check scheduler is running: `php artisan schedule:list`
-- Check logs: `storage/logs/laravel.log`
-- Verify characters have ESI tokens: SeAT Admin → Characters
-- Check ESI API status: https://status.eve-esi.com/
+**No activities showing up:**
+```bash
+php artisan member-engagement:sync --days=90
+php artisan member-engagement:aggregate --days=90
+```
+Check `storage/logs/laravel-*.log` for errors from the sync/aggregate commands.
 
-**No permissions appearing:**
-- Run migration: `php artisan migrate`
-- Seed permissions: `php artisan db:seed --class="\RCI\MemberEngagement\Database\Seeders\ScheduleSeeder"`
-- Clear config cache: `php artisan config:cache`
+**Characters showing as "Unknown (id)":**
+```bash
+php artisan member-engagement:resolve-names --limit=5000
+```
+If it stays unresolved, that character ID may no longer exist on ESI (e.g. a
+deleted character).
 
-**Manager-Core integration not working:**
-- Verify MC installed: `composer show seatplus/manager-core`
-- Check MC is bootstrapped: `php artisan list | grep manager-core`
-- Run diagnostic: `php artisan manager-core:diagnose --detailed`
+**Scheduled jobs not running:** confirm SeAT's own scheduler/cron is running
+(`php artisan schedule:list` should show the three commands above once the
+plugin has booted at least once).
 
-## Architecture
+## Uninstallation
 
-### Phase 1: Foundation (✓ Complete)
-- [x] Plugin bootstrap and service provider
-- [x] Database schema (activities, alerts, aggregation cache)
-- [x] Eloquent models with aggregation scopes
-- [x] Core service layer structure (ESI, tax wallet, mining, orchestration)
-- [x] Configuration and route placeholders
-- [x] Character linking via SeAT's built-in relationships
-
-### Phase 2: Data Collection (In Progress)
-- [ ] ESI API integration for kills/losses
-- [ ] Tax wallet data collection
-- [ ] Mining data integration (via Mining-Manager)
-- [ ] Activity collection orchestration job
-
-### Phase 3: Aggregation & Performance (✓ Complete)
-- [x] On-the-fly aggregation logic with comprehensive metrics
-- [x] Optional caching layer (configurable TTL)
-- [x] Time window calculations (day/week/month/quarter/year)
-- [x] Character grouping logic with per-character breakdowns
-- [x] League table generation and ranking
-- [x] Activity trend analysis over time
-- [x] Cache management commands
-
-### Phase 4: Access Control & Views (✓ Complete)
-- [x] Permission model implementation (view_own_activities, view_all_activities)
-- [x] Member dashboard with time windows and activity breakdown
-- [x] Director dashboard with corp-wide summaries
-- [x] League tables and member rankings
-- [x] Character detail drilldown (member view)
-- [x] Member detail drilldown (director view)
-- [x] Permission middleware and route protection
-
-### Phase 5: API & Advanced Features (✓ Complete)
-- [x] REST API endpoints (activities, aggregations, league tables)
-- [x] Alert system (threshold, unusual activity, member alerts)
-- [x] Notification dispatch (in-app, email, webhook stubs)
-- [x] Alert management (CRUD via API)
-- [x] Test notification endpoint
-- [x] Scheduled alert checking
-
-### Phase 6: Manager-Core Integration (✓ Complete)
-- [x] EventBus subscription for character/mining/ESI events
-- [x] ESI FastPoll integration for real-time kills/losses
-- [x] Event listeners for Mining-Manager integration
-- [x] Event publishing (activities, alerts)
-- [x] Cross-plugin communication via PluginBridge
-- [x] Graceful fallback when Manager-Core unavailable
-
-## Development Notes
-
-- Uses Laravel PSR-4 autoloading
-- Database migrations auto-discovered by SeAT
-- Permissions managed via Spatie/Laravel-Permission
-- Graceful fallback when Manager-Core is not available
+```bash
+composer remove rci/member-engagement
+php artisan migrate:rollback --path=vendor/rci/member-engagement/database/migrations
+```
 
 ## License
 
