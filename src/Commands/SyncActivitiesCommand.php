@@ -27,7 +27,8 @@ class SyncActivitiesCommand extends Command
         $this->line("  Mining: {$results['mining']} records");
         $this->line("  Kills: {$results['kills']} records");
         $this->line("  Losses: {$results['losses']} records");
-        $this->line("  Tax/Bounty: {$results['tax']} records");
+        $this->line("  PvE Bounty/Tax: {$results['pve_bounty_tax']} records");
+        $this->line("  Industry Tax: {$results['industry_tax']} records");
         $this->line("  Total: " . array_sum($results) . " records");
 
         return self::SUCCESS;
