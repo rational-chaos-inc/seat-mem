@@ -177,6 +177,13 @@ class DataCollectionService
         return $count;
     }
 
+    /**
+     * Wallet ref_types that pay out to an individual character (second_party_id),
+     * as opposed to corp-to-corp transactions (industry tax, market escrow, etc.)
+     * which have no individual member to attribute them to.
+     */
+    private const CHARACTER_PAYOUT_REF_TYPES = ['bounty_prizes', 'daily_goal_payouts'];
+
     private function collectTaxData(?Carbon $since = null): int
     {
         $count = 0;
@@ -187,23 +194,41 @@ class DataCollectionService
             }
 
             $entries = CorporationWalletJournal::where('date', '>=', $since)
+                ->whereIn('ref_type', self::CHARACTER_PAYOUT_REF_TYPES)
                 ->orderBy('date', 'desc')
                 ->get();
 
             foreach ($entries as $entry) {
+                // For these ref_types, first_party_id is the paying NPC entity
+                // (e.g. CONCORD bounty office) and second_party_id is the
+                // character who received the payout.
+                $characterId = $entry->second_party_id;
+                if (!$characterId) {
+                    continue;
+                }
+
                 $sourceId = "wallet_{$entry->id}";
+
+                // bounty_prizes descriptions read "<Character Name> got bounty
+                // prizes for killing pirates in <system>" - extract the name as
+                // a display fallback for characters SeAT hasn't synced yet.
+                $characterName = null;
+                if ($entry->description && preg_match('/^(.+?)\s+got\s+/', $entry->description, $matches)) {
+                    $characterName = $matches[1];
+                }
 
                 Activity::updateOrCreate(
                     ['source_id' => $sourceId],
                     [
                         'activity_type' => 'tax_wallet',
-                        'character_id' => 0,
+                        'character_id' => $characterId,
                         'corporation_id' => $entry->corporation_id,
                         'activity_timestamp' => $entry->date,
                         'metadata' => [
                             'amount' => abs($entry->amount ?? 0),
                             'ref_type' => $entry->ref_type,
                             'description' => $entry->description,
+                            'character_name' => $characterName,
                         ],
                     ]
                 );

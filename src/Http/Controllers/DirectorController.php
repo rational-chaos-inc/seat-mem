@@ -38,7 +38,9 @@ class DirectorController
             ->pluck('name', 'corporation_id');
 
         foreach ($activities as $activity) {
-            $activity->character_name = $charNames[$activity->character_id] ?? null;
+            $activity->character_name = $charNames[$activity->character_id]
+                ?? $activity->metadata['character_name']
+                ?? null;
             $activity->corporation_name = $corpNames[$activity->corporation_id] ?? null;
         }
 

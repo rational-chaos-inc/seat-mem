@@ -33,7 +33,9 @@ class DashboardController
             ->pluck('name', 'character_id');
 
         foreach ($activities as $activity) {
-            $activity->character_name = $charNames[$activity->character_id] ?? null;
+            $activity->character_name = $charNames[$activity->character_id]
+                ?? $activity->metadata['character_name']
+                ?? null;
         }
 
         return view('member-engagement::dashboard.member', [
