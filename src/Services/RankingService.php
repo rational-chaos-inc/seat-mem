@@ -81,6 +81,83 @@ class RankingService
     }
 
     /**
+     * One row per registered SeAT account (main + linked alts), showing how
+     * many distinct days in the given month they logged in on any of their
+     * characters, plus when they last logged in overall - so an account
+     * with zero days this month still shows up with a real "last seen"
+     * date rather than silently vanishing from the list. Sorted so the
+     * least active accounts surface first.
+     *
+     * @return object[]
+     */
+    public function buildHeartbeat(Carbon $month, bool $isCurrentMonth): array
+    {
+        $groups = $this->consolidation->allAccountGroups();
+
+        if (empty($groups)) {
+            return [];
+        }
+
+        $charToMain = [];
+        foreach ($groups as $mainId => $characterIds) {
+            foreach ($characterIds as $characterId) {
+                $charToMain[$characterId] = $mainId;
+            }
+        }
+
+        $monthStart = $month->copy()->startOfMonth()->toDateString();
+        $monthEnd = $isCurrentMonth
+            ? Carbon::now()->toDateString()
+            : $month->copy()->endOfMonth()->toDateString();
+
+        $monthLoginDates = DailyMemberStat::where('logged_in', true)
+            ->whereIn('character_id', array_keys($charToMain))
+            ->whereBetween('date', [$monthStart, $monthEnd])
+            ->get(['character_id', 'date'])
+            ->groupBy(fn($row) => $charToMain[$row->character_id]);
+
+        $lastLoginByCharacter = DailyMemberStat::where('logged_in', true)
+            ->whereIn('character_id', array_keys($charToMain))
+            ->selectRaw('character_id, MAX(date) as last_date')
+            ->groupBy('character_id')
+            ->pluck('last_date', 'character_id');
+
+        $today = Carbon::now()->toDateString();
+
+        $heartbeat = collect($groups)->map(function ($characterIds, $mainId) use ($monthLoginDates, $lastLoginByCharacter, $today) {
+            $daysThisMonth = ($monthLoginDates->get($mainId) ?? collect())
+                ->pluck('date')
+                ->map(fn($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
+                ->unique()
+                ->count();
+
+            $lastLogin = collect($characterIds)
+                ->map(fn($id) => $lastLoginByCharacter[$id] ?? null)
+                ->filter()
+                ->map(fn($d) => Carbon::parse($d))
+                ->sort()
+                ->last();
+
+            return (object) [
+                'character_id' => (int) $mainId,
+                'corporation_id' => null,
+                'metadata' => [],
+                'member_count' => count($characterIds),
+                'days_logged_in' => $daysThisMonth,
+                'last_login_date' => $lastLogin,
+                'logged_in_today' => $lastLogin && $lastLogin->toDateString() === $today,
+            ];
+        })->values();
+
+        $this->entityResolution->attachDisplayNames($heartbeat);
+
+        return $heartbeat->sortBy([
+            ['days_logged_in', 'asc'],
+            fn($a, $b) => ($a->last_login_date?->timestamp ?? 0) <=> ($b->last_login_date?->timestamp ?? 0),
+        ])->values()->all();
+    }
+
+    /**
      * Resolve a `?month=YYYY-MM` request value to a month start + whether
      * it's the current (still live) month, clamped so navigating into the
      * future isn't possible.

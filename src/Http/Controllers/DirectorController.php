@@ -24,9 +24,11 @@ class DirectorController
         [$month, $isCurrentMonth] = $this->rankingService->resolveMonth($request->query('month'));
 
         $rankings = $this->rankingService->buildRankings($month, $isCurrentMonth);
+        $heartbeat = $this->rankingService->buildHeartbeat($month, $isCurrentMonth);
 
         return view('member-engagement::dashboard.director', [
             'rankings' => $rankings,
+            'heartbeat' => $heartbeat,
             'month' => $month,
             'isCurrentMonth' => $isCurrentMonth,
             'availableMonths' => $this->rankingService->availableMonths(),

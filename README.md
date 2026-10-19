@@ -26,9 +26,13 @@ on a Corporation View, plus each member's own figures on My Activities.
 - **My Activities** — the same four figures as Corporation View, but just
   the logged-in member's own account (main + linked alts), not ranked
   against anyone else
-- **Settings page** — per-metric visibility (Directors / Members / Both) and
-  weighting, plus the Fleet Participation minimum size, configurable per
-  corporation
+- **Heartbeat** — one row per registered SeAT account showing how many days
+  this month they've logged in (main + linked alts combined), and when they
+  last logged in if not today — surfaces inactive members even if they have
+  zero activity to otherwise show up in
+- **Settings page** — a single set of per-metric visibility (Directors /
+  Members / Both), weighting, and Fleet Participation minimum size, applying
+  to the whole install regardless of corporation
 
 ## Prerequisites
 
@@ -87,7 +91,8 @@ pointing at this GitHub repo.
 4. **Configure the Director Settings page**
 
    Visit `/member-engagement/settings` as a director to set per-metric
-   visibility, weighting, and the Fleet Participation minimum size for each
+   visibility, weighting, and the Fleet Participation minimum size — one
+   set of settings for the whole install, applying regardless of
    corporation. Sensible defaults apply automatically if you skip this.
 
 Scheduled jobs register themselves automatically (via SeAT's own schedule
@@ -98,8 +103,8 @@ seeding on plugin boot) — no manual seeding step needed.
 - **My Activities:** `/member-engagement/dashboard` — the logged-in member's
   own figures (requires `view_own_activities`)
 - **Corporation View:** `/member-engagement/director` — the four monthly
-  leaderboards (requires `view_all_activities`). Scoped to registered SeAT
-  members only; see Known Limitations
+  leaderboards plus the Heartbeat list (requires `view_all_activities`).
+  Scoped to registered SeAT members only; see Known Limitations
 - **Settings:** `/member-engagement/settings` (requires `view_all_activities`)
 
 ## Scheduled Commands

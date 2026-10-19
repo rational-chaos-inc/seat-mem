@@ -136,7 +136,7 @@
 
                     <div class="col-md-3">
                         <h5>Top Fleet Participation</h5>
-                        <div class="small text-muted mb-2">Corp's configured minimum fleet size, 1/hour max</div>
+                        <div class="small text-muted mb-2">Configured minimum fleet size, 1/hour max</div>
                         @if(empty($rankings['fleet']))
                             <div class="alert alert-info">No data for this month</div>
                         @else
@@ -166,6 +166,56 @@
                         @endif
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Heartbeat</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    Days logged in this month, per registered SeAT account (main + linked
+                    alts consolidated). Least active accounts are listed first.
+                </p>
+
+                @if(empty($heartbeat))
+                    <div class="alert alert-info">No registered accounts to show</div>
+                @else
+                    <table class="table table-sm table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Member</th>
+                                <th class="text-right">Days Logged In ({{ $month->format('M Y') }})</th>
+                                <th class="text-right">Last Login</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($heartbeat as $row)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>
+                                        {{ $row->display_name }}
+                                        @if($row->member_count > 1)
+                                            <span class="badge badge-secondary" title="Consolidated characters">{{ $row->member_count }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-right">{{ $row->days_logged_in }}</td>
+                                    <td class="text-right">
+                                        @if($row->logged_in_today)
+                                            <span class="badge badge-success">Logged in today</span>
+                                        @elseif($row->last_login_date)
+                                            Last login on {{ $row->last_login_date->format('d/m/Y') }}
+                                        @else
+                                            <span class="text-muted">Never</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
             </div>
         </div>
     </div>

@@ -98,4 +98,48 @@ class AccountConsolidationService
 
         return array_values(array_unique($linked));
     }
+
+    /**
+     * Every registered SeAT account's full character group (main + linked
+     * alts), for listings that need to show ALL registered members -
+     * including ones with zero activity - rather than only those who show
+     * up in activity data (e.g. the Heartbeat list).
+     *
+     * @return array<int, int[]> main character_id => character_id[]
+     */
+    public function allAccountGroups(): array
+    {
+        $users = DB::table('users')->whereNotNull('main_character_id')->get(['id', 'main_character_id']);
+        if ($users->isEmpty()) {
+            return [];
+        }
+
+        $tokens = DB::table('refresh_tokens')->whereNull('deleted_at')->get(['user_id', 'character_id']);
+        $linkedByUser = $tokens->groupBy('user_id');
+        $ownerByCharacter = $tokens->pluck('user_id', 'character_id');
+
+        $groups = [];
+        foreach ($users as $user) {
+            $linked = ($linkedByUser->get($user->id) ?? collect())
+                ->pluck('character_id')
+                ->map(fn($id) => (int) $id)
+                ->all();
+
+            $mainId = (int) $user->main_character_id;
+
+            if (!in_array($mainId, $linked, true)) {
+                $currentOwner = $ownerByCharacter[$mainId] ?? null;
+
+                if ($currentOwner === null || (int) $currentOwner === (int) $user->id) {
+                    $linked[] = $mainId;
+                }
+            }
+
+            if (!empty($linked)) {
+                $groups[$mainId] = array_values(array_unique($linked));
+            }
+        }
+
+        return $groups;
+    }
 }

@@ -4,13 +4,15 @@ namespace RCI\MemberEngagement\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Single global row - these settings apply to every main character and
+ * their linked alts, regardless of which corporation they belong to.
+ */
 class MemberEngagementSetting extends Model
 {
     protected $table = 'member_engagement_settings';
 
     protected $fillable = [
-        'corporation_id',
-        'user_id',
         'login_visibility',
         'mining_visibility',
         'pve_bounty_visibility',
@@ -33,4 +35,22 @@ class MemberEngagementSetting extends Model
         'fleet_participation_weight' => 'decimal:2',
         'fleet_participation_min_size' => 'integer',
     ];
+
+    public static function current(): self
+    {
+        return static::firstOrCreate([], [
+            'login_visibility' => 'directors',
+            'mining_visibility' => 'directors',
+            'pve_bounty_visibility' => 'directors',
+            'industry_tax_visibility' => 'directors',
+            'pvp_visibility' => 'directors',
+            'fleet_participation_visibility' => 'directors',
+            'mining_weight' => 1.0,
+            'pve_bounty_weight' => 1.0,
+            'industry_tax_weight' => 1.0,
+            'pvp_weight' => 1.0,
+            'fleet_participation_weight' => 1.0,
+            'fleet_participation_min_size' => 5,
+        ]);
+    }
 }

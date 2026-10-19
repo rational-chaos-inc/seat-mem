@@ -36,12 +36,10 @@ class AggregationService
             ->pluck('character_id')
             ->toArray();
 
-        // Each corporation may configure its own minimum fleet size for the
-        // Fleet Participation metric; fall back to the default when a
-        // corporation has no settings row yet.
-        $fleetMinSizeByCorp = MemberEngagementSetting::whereIn('corporation_id', $corpIds)
-            ->whereNotNull('fleet_participation_min_size')
-            ->pluck('fleet_participation_min_size', 'corporation_id');
+        // Fleet Participation's minimum size is a single global setting,
+        // applying regardless of corporation.
+        $fleetMinSize = MemberEngagementSetting::current()->fleet_participation_min_size
+            ?? self::DEFAULT_FLEET_MIN_SIZE;
 
         // Group by corporation and character
         $grouped = $activities->groupBy(function ($activity) {
@@ -78,9 +76,8 @@ class AggregationService
                 };
             }
 
-            // Fleet participation: killmails with N+ total attackers (per-corp
-            // configurable minimum), deduplicated to 1 per hour
-            $fleetMinSize = $fleetMinSizeByCorp[$corpId] ?? self::DEFAULT_FLEET_MIN_SIZE;
+            // Fleet participation: killmails with N+ total attackers
+            // (globally configurable minimum), deduplicated to 1 per hour
             $stats['fleet_participation'] = $this->countFleetParticipationByHour($groupedActivities, $fleetMinSize);
 
             DailyMemberStat::updateOrCreate(
