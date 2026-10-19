@@ -24,7 +24,7 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
 
     public function getPackagistPackageName(): string
     {
-        return 'rci/member-engagement';
+        return 'member-engagement';
     }
 
     public function getPackagistVendorName(): string
