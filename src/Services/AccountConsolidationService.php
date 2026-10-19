@@ -62,9 +62,16 @@ class AccountConsolidationService
     /**
      * All character IDs belonging to a SeAT user's account: their linked
      * characters (refresh_tokens.user_id) plus their designated main
-     * character, included even if its token has since expired/been
+     * character, included even if its own token has since expired/been
      * revoked - the character ID itself stays valid for activity lookups
      * regardless of whether SeAT can currently still pull ESI data for it.
+     *
+     * The one exception: if that main character is *currently* linked to a
+     * *different* user's account (a stale main_character_id pointer left
+     * over from before the character moved accounts - confirmed to happen
+     * on live data), it's excluded here rather than counted for both users.
+     * Whoever actively holds the token wins; resolveGroups() makes the same
+     * choice for consistency between Corporation View and My Activities.
      *
      * @return int[]
      */
@@ -77,8 +84,16 @@ class AccountConsolidationService
             ->map(fn($id) => (int) $id)
             ->all();
 
-        if ($mainCharacterId) {
-            $linked[] = (int) $mainCharacterId;
+        if ($mainCharacterId && !in_array((int) $mainCharacterId, $linked, true)) {
+            $ownedByAnotherAccount = DB::table('refresh_tokens')
+                ->where('character_id', $mainCharacterId)
+                ->where('user_id', '!=', $userId)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if (!$ownedByAnotherAccount) {
+                $linked[] = (int) $mainCharacterId;
+            }
         }
 
         return array_values(array_unique($linked));
