@@ -29,35 +29,47 @@ class AggregationService
         $activities = $activities->filter(fn($a) => !empty($a->corporation_id));
 
         // Logins are tracked independently of trackable wallet/kill/mining
-        // activity. corporation_member_trackings only ever holds each
-        // character's MOST RECENT known logon/logoff (ESI exposes no login
-        // history), so a character who logs in without generating any
+        // activity - a character who logs in without generating any
         // trackable activity that day would otherwise never get a "logged
-        // in" day recorded at all - which is exactly what was happening
+        // in" day recorded at all, which is exactly what was happening
         // before this, since 'logged_in' was only ever set on rows that
         // already existed because of tracked activity.
         //
-        // Scoped to registered SeAT characters (same scope as the rest of
-        // this plugin) rather than every corporation_member_trackings row -
-        // that table can cover many more corporations/characters than this
-        // plugin actually tracks, and only registered members' logins are
-        // ever surfaced anywhere (e.g. the Heartbeat list).
+        // character_onlines is SeAT core's sync of ESI's
+        // /characters/{id}/online/ endpoint (per-character, using that
+        // character's own token) - unlike corporation_member_trackings
+        // (corp-wide membertracking, which can miss a registered character
+        // entirely depending on corp roles/bucket coverage), this is
+        // scoped exactly to the character and always available for every
+        // registered one. It still only ever holds the MOST RECENT known
+        // login/logout though (ESI exposes no history), hence the sticky
+        // logged_in handling below.
         $registeredCharacterIds = DB::table('refresh_tokens')->whereNull('deleted_at')->pluck('character_id');
 
-        $loginQuery = DB::table('corporation_member_trackings')
+        $onlineRows = DB::table('character_onlines')
             ->whereIn('character_id', $registeredCharacterIds)
             ->where(function ($q) use ($startOfDay, $endOfDay) {
-                $q->whereBetween('logon_date', [$startOfDay, $endOfDay])
-                    ->orWhereBetween('logoff_date', [$startOfDay, $endOfDay]);
-            });
+                $q->whereBetween('last_login', [$startOfDay, $endOfDay])
+                    ->orWhereBetween('last_logout', [$startOfDay, $endOfDay]);
+            })
+            ->get(['character_id']);
+
+        // character_onlines has no corporation_id of its own - resolve it
+        // via SeAT core's character_affiliations (bulk-synced for every
+        // known character, so it covers characters with zero activity too,
+        // unlike this plugin's own slower-building affiliation cache).
+        $corpByCharacter = DB::table('character_affiliations')
+            ->whereIn('character_id', $onlineRows->pluck('character_id'))
+            ->pluck('corporation_id', 'character_id');
+
+        $logins = $onlineRows
+            ->filter(fn($row) => isset($corpByCharacter[$row->character_id]))
+            ->map(fn($row) => $corpByCharacter[$row->character_id] . '|' . $row->character_id)
+            ->unique();
 
         if ($corporationId) {
-            $loginQuery->where('corporation_id', $corporationId);
+            $logins = $logins->filter(fn($key) => str_starts_with($key, $corporationId . '|'));
         }
-
-        $logins = $loginQuery->get(['corporation_id', 'character_id'])
-            ->map(fn($row) => $row->corporation_id . '|' . $row->character_id)
-            ->unique();
 
         // Fleet Participation's minimum size is a single global setting,
         // applying regardless of corporation.
@@ -72,11 +84,11 @@ class AggregationService
         // Every key with activity and/or a detected login this day needs a row.
         $keys = $grouped->keys()->merge($logins)->unique();
 
-        // corporation_member_trackings is a continuously-overwritten snapshot,
-        // so re-checking it on a later run can miss a login it already
-        // caught for this day (the character logged in again since, moving
-        // the snapshot on). Once a day is marked logged_in, keep it that
-        // way rather than letting a later recompute flip it back to false.
+        // character_onlines is a continuously-overwritten snapshot, so
+        // re-checking it on a later run can miss a login it already caught
+        // for this day (the character logged in again since, moving the
+        // snapshot on). Once a day is marked logged_in, keep it that way
+        // rather than letting a later recompute flip it back to false.
         $previouslyLoggedIn = DailyMemberStat::where('date', $date->toDateString())
             ->where('logged_in', true)
             ->get(['corporation_id', 'character_id'])
