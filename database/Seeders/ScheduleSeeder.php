@@ -36,6 +36,14 @@ class ScheduleSeeder extends AbstractScheduleSeeder
                 'ping_before' => null,
                 'ping_after' => null,
             ],
+            [
+                'command' => 'member-engagement:finalize-month',
+                'expression' => '15 2 1 * *',  // 02:15 on the 1st of each month - finalizes the month that just ended
+                'allow_overlap' => false,
+                'allow_maintenance' => false,
+                'ping_before' => null,
+                'ping_after' => null,
+            ],
         ];
     }
 

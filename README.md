@@ -20,6 +20,10 @@ corporation-wide activity feed, with per-metric visibility and weighting control
   directly), so this plugin resolves names via ESI's public endpoints in the
   background and displays `Character (Corporation) [Alliance]`
 - **Director dashboard** — raw activity feed across the corporation
+- **Rankings dashboard** — monthly leaderboards for tax income (PvE Bounty &
+  Tax + Industry Tax combined), PvP kills, and fleet participation, with
+  alts consolidated under their account's main character. Browse the current
+  (live) month or any previous month with recorded data
 - **Settings page** — per-metric visibility (Directors / Members / Both) and
   weighting, plus the Fleet Participation minimum size, configurable per
   corporation
@@ -95,6 +99,10 @@ seeding on plugin boot) — no manual seeding step needed.
 - **Member Dashboard:** `/member-engagement/dashboard`
 - **Director Dashboard:** `/member-engagement/director` (requires
   `view_all_activities`)
+- **Rankings:** `/member-engagement/rankings` (requires `view_all_activities`)
+  — monthly leaderboards (tax income, PvP kills, fleet participation),
+  consolidated by account main character. Scoped to registered SeAT members
+  only; see Known Limitations.
 - **Settings:** `/member-engagement/settings` (requires `view_all_activities`)
 
 ## Scheduled Commands
@@ -106,9 +114,14 @@ Registered automatically once the plugin boots:
 | `member-engagement:sync --days=2` | every 15 min | Pull new activity from SeAT's locally-synced mining/killmail/wallet data |
 | `member-engagement:aggregate --days=3` | every 30 min | Roll activities up into daily per-character stats |
 | `member-engagement:resolve-names --limit=1000` | every 20 min | Resolve character/corp/alliance names via ESI |
+| `member-engagement:finalize-month` | 02:15 on the 1st of the month | Roll the month that just ended into a finalized monthly snapshot |
 
 Each is also runnable manually, e.g. `php artisan member-engagement:sync --days=90`
-for a larger backfill on first install.
+for a larger backfill on first install. For Rankings, run
+`php artisan member-engagement:finalize-month --all` once after installing to
+backfill finalized snapshots for every month that already has daily stats data
+(the current, in-progress month is always computed live instead, regardless
+of any snapshot).
 
 ## Configuration
 
@@ -135,6 +148,13 @@ return [
   faster one-time backfill.
 - **Member dashboard shows no data currently** — this is deliberate, not a
   bug; the director feed and underlying data collection are unaffected.
+- **Rankings only covers registered SeAT members**: EVE's ESI never reveals
+  which characters share an account — the only linkage anyone can know is
+  for characters whose owner has personally authenticated them into SeAT
+  (main + alts). A corp member who's active but has never logged into SeAT
+  simply has nothing to consolidate under and won't appear on Rankings,
+  regardless of how much activity they generate. This improves automatically
+  as more members register their characters in SeAT.
 
 ## Troubleshooting
 

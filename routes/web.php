@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use RCI\MemberEngagement\Http\Controllers\DashboardController;
 use RCI\MemberEngagement\Http\Controllers\DirectorController;
+use RCI\MemberEngagement\Http\Controllers\RankingsController;
 use RCI\MemberEngagement\Http\Controllers\SettingsController;
 
 Route::middleware(['web', 'auth', 'verified'])
@@ -14,6 +15,9 @@ Route::middleware(['web', 'auth', 'verified'])
 
         Route::get('/director', [DirectorController::class, 'index'])
             ->name('director.index');
+
+        Route::get('/rankings', [RankingsController::class, 'index'])
+            ->name('rankings');
 
         Route::get('/settings', [SettingsController::class, 'index'])
             ->name('settings');

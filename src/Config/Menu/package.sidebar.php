@@ -24,6 +24,12 @@ return [
                 'permission' => 'member-engagement.view_all_activities',
             ],
             [
+                'name' => 'Rankings',
+                'icon' => 'fas fa-trophy',
+                'route' => 'member-engagement.rankings',
+                'permission' => 'member-engagement.view_all_activities',
+            ],
+            [
                 'name' => 'Settings',
                 'icon' => 'fas fa-cog',
                 'route' => 'member-engagement.settings',

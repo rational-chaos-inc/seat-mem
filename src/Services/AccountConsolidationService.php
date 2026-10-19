@@ -1,0 +1,60 @@
+<?php
+
+namespace RCI\MemberEngagement\Services;
+
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Resolves each character to the "main character" of the EVE/SeAT account
+ * it belongs to, for consolidating alts under one entry on rankings.
+ *
+ * EVE's ESI has no endpoint that reveals which characters share an account
+ * - that's deliberately not exposed. The only linkage SeAT (or anyone) can
+ * know is for characters whose owner has personally authenticated them
+ * into SeAT (refresh_tokens.character_id -> user_id -> users.main_character_id).
+ * Most characters referenced in corp-wide activity data (killmails, wallet
+ * journal, industry jobs) were never individually authenticated, so they
+ * have no linkage at all - resolveGroups() deliberately omits them rather
+ * than treating them as a group of one, since the Rankings dashboard is
+ * scoped to registered SeAT members and their known alts only.
+ */
+class AccountConsolidationService
+{
+    /**
+     * @param int[] $characterIds
+     * @return array<int, int> character_id => main character_id, for
+     *         characters linked to a registered SeAT account only.
+     *         Characters with no such link are simply absent from the
+     *         returned map - callers should treat that as "exclude".
+     */
+    public function resolveGroups(array $characterIds): array
+    {
+        $characterIds = array_values(array_unique(array_filter($characterIds)));
+        if (empty($characterIds)) {
+            return [];
+        }
+
+        $userIdByCharacter = DB::table('refresh_tokens')
+            ->whereIn('character_id', $characterIds)
+            ->whereNull('deleted_at')
+            ->pluck('user_id', 'character_id');
+
+        if ($userIdByCharacter->isEmpty()) {
+            return [];
+        }
+
+        $mainCharacterByUser = DB::table('users')
+            ->whereIn('id', $userIdByCharacter->unique()->values())
+            ->whereNotNull('main_character_id')
+            ->pluck('main_character_id', 'id');
+
+        $map = [];
+        foreach ($userIdByCharacter as $characterId => $userId) {
+            if (isset($mainCharacterByUser[$userId])) {
+                $map[$characterId] = (int) $mainCharacterByUser[$userId];
+            }
+        }
+
+        return $map;
+    }
+}

@@ -3,9 +3,12 @@
 namespace RCI\MemberEngagement;
 
 use Seat\Services\AbstractSeatPlugin;
+use RCI\MemberEngagement\Services\AccountConsolidationService;
 use RCI\MemberEngagement\Services\AggregationService;
 use RCI\MemberEngagement\Services\DataCollectionService;
 use RCI\MemberEngagement\Services\EntityResolutionService;
+use RCI\MemberEngagement\Services\MonthlyAggregationService;
+use RCI\MemberEngagement\Services\RankingService;
 
 class MemberEngagementServiceProvider extends AbstractSeatPlugin
 {
@@ -54,6 +57,9 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
         $this->app->singleton(DataCollectionService::class);
         $this->app->singleton(AggregationService::class);
         $this->app->singleton(EntityResolutionService::class);
+        $this->app->singleton(AccountConsolidationService::class);
+        $this->app->singleton(MonthlyAggregationService::class);
+        $this->app->singleton(RankingService::class);
     }
 
     private function publishConfig(): void
@@ -91,6 +97,7 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
             \RCI\MemberEngagement\Commands\AggregateStatsCommand::class,
             \RCI\MemberEngagement\Commands\GenerateTestDataCommand::class,
             \RCI\MemberEngagement\Commands\ResolveNamesCommand::class,
+            \RCI\MemberEngagement\Commands\FinalizeMonthCommand::class,
         ]);
     }
 
