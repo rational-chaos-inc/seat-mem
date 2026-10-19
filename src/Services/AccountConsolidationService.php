@@ -15,8 +15,9 @@ use Illuminate\Support\Facades\DB;
  * Most characters referenced in corp-wide activity data (killmails, wallet
  * journal, industry jobs) were never individually authenticated, so they
  * have no linkage at all - resolveGroups() deliberately omits them rather
- * than treating them as a group of one, since the Rankings dashboard is
- * scoped to registered SeAT members and their known alts only.
+ * than treating them as a group of one, since the Corporation View
+ * leaderboards are scoped to registered SeAT members and their known
+ * alts only.
  */
 class AccountConsolidationService
 {
@@ -56,5 +57,30 @@ class AccountConsolidationService
         }
 
         return $map;
+    }
+
+    /**
+     * All character IDs belonging to a SeAT user's account: their linked
+     * characters (refresh_tokens.user_id) plus their designated main
+     * character, included even if its token has since expired/been
+     * revoked - the character ID itself stays valid for activity lookups
+     * regardless of whether SeAT can currently still pull ESI data for it.
+     *
+     * @return int[]
+     */
+    public function charactersForUser(int $userId, ?int $mainCharacterId = null): array
+    {
+        $linked = DB::table('refresh_tokens')
+            ->where('user_id', $userId)
+            ->whereNull('deleted_at')
+            ->pluck('character_id')
+            ->map(fn($id) => (int) $id)
+            ->all();
+
+        if ($mainCharacterId) {
+            $linked[] = (int) $mainCharacterId;
+        }
+
+        return array_values(array_unique($linked));
     }
 }

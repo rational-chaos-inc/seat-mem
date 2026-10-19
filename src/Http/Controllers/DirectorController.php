@@ -4,14 +4,12 @@ namespace RCI\MemberEngagement\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use RCI\MemberEngagement\Models\Activity;
-use RCI\MemberEngagement\Services\EntityResolutionService;
-use Carbon\Carbon;
+use RCI\MemberEngagement\Services\RankingService;
 
 class DirectorController
 {
     public function __construct(
-        private EntityResolutionService $entityResolution,
+        private RankingService $rankingService,
     ) {
     }
 
@@ -23,19 +21,15 @@ class DirectorController
             abort(403, 'Unauthorized');
         }
 
-        $timeWindow = $request->query('window', 'month');
-        $days = config('member-engagement.time_windows.' . $timeWindow, 30);
+        [$month, $isCurrentMonth] = $this->rankingService->resolveMonth($request->query('month'));
 
-        $activities = Activity::where('activity_timestamp', '>=', Carbon::now()->subDays($days))
-            ->orderBy('activity_timestamp', 'desc')
-            ->limit(100)
-            ->get();
-
-        $this->entityResolution->attachDisplayNames($activities);
+        $rankings = $this->rankingService->buildRankings($month, $isCurrentMonth);
 
         return view('member-engagement::dashboard.director', [
-            'activities' => $activities,
-            'timeWindow' => $timeWindow,
+            'rankings' => $rankings,
+            'month' => $month,
+            'isCurrentMonth' => $isCurrentMonth,
+            'availableMonths' => $this->rankingService->availableMonths(),
         ]);
     }
 }

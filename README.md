@@ -1,8 +1,8 @@
 # SeAT Member Engagement Module
 
 A SeAT plugin that tracks corporation member activity — mining, PvP kills/losses,
-PvE bounty income, and industry tax — and presents it to directors as a
-corporation-wide activity feed, with per-metric visibility and weighting controls.
+PvE bounty income, and industry tax — and presents it as monthly leaderboards
+on a Corporation View, plus each member's own figures on My Activities.
 
 ## Features
 
@@ -19,17 +19,16 @@ corporation-wide activity feed, with per-metric visibility and weighting control
   get a local SeAT record (SeAT only syncs characters that have authenticated
   directly), so this plugin resolves names via ESI's public endpoints in the
   background and displays `Character (Corporation) [Alliance]`
-- **Director dashboard** — raw activity feed across the corporation
-- **Rankings dashboard** — monthly leaderboards for tax income (PvE Bounty &
-  Tax + Industry Tax combined), PvP kills, and fleet participation, with
-  alts consolidated under their account's main character. Browse the current
-  (live) month or any previous month with recorded data
+- **Corporation View** — monthly leaderboards for PvE Bounty & Tax, Industry
+  Tax, PvP kills, and fleet participation (four separate leaderboards, not
+  combined), with alts consolidated under their account's main character.
+  Browse the current (live) month or any previous month with recorded data
+- **My Activities** — the same four figures as Corporation View, but just
+  the logged-in member's own account (main + linked alts), not ranked
+  against anyone else
 - **Settings page** — per-metric visibility (Directors / Members / Both) and
   weighting, plus the Fleet Participation minimum size, configurable per
   corporation
-
-The member-facing "My Activities" page currently shows no data by design —
-data collection and the director feed are unaffected.
 
 ## Prerequisites
 
@@ -96,13 +95,11 @@ seeding on plugin boot) — no manual seeding step needed.
 
 ## Routes
 
-- **Member Dashboard:** `/member-engagement/dashboard`
-- **Director Dashboard:** `/member-engagement/director` (requires
-  `view_all_activities`)
-- **Rankings:** `/member-engagement/rankings` (requires `view_all_activities`)
-  — monthly leaderboards (tax income, PvP kills, fleet participation),
-  consolidated by account main character. Scoped to registered SeAT members
-  only; see Known Limitations.
+- **My Activities:** `/member-engagement/dashboard` — the logged-in member's
+  own figures (requires `view_own_activities`)
+- **Corporation View:** `/member-engagement/director` — the four monthly
+  leaderboards (requires `view_all_activities`). Scoped to registered SeAT
+  members only; see Known Limitations
 - **Settings:** `/member-engagement/settings` (requires `view_all_activities`)
 
 ## Scheduled Commands
@@ -117,11 +114,11 @@ Registered automatically once the plugin boots:
 | `member-engagement:finalize-month` | 02:15 on the 1st of the month | Roll the month that just ended into a finalized monthly snapshot |
 
 Each is also runnable manually, e.g. `php artisan member-engagement:sync --days=90`
-for a larger backfill on first install. For Rankings, run
+for a larger backfill on first install. Run
 `php artisan member-engagement:finalize-month --all` once after installing to
-backfill finalized snapshots for every month that already has daily stats data
-(the current, in-progress month is always computed live instead, regardless
-of any snapshot).
+backfill finalized monthly snapshots for every month that already has daily
+stats data (the current, in-progress month is always computed live instead,
+regardless of any snapshot).
 
 ## Configuration
 
@@ -146,15 +143,13 @@ return [
   its activity history will take a few hours to fully resolve. Run
   `php artisan member-engagement:resolve-names --limit=10000` manually for a
   faster one-time backfill.
-- **Member dashboard shows no data currently** — this is deliberate, not a
-  bug; the director feed and underlying data collection are unaffected.
-- **Rankings only covers registered SeAT members**: EVE's ESI never reveals
-  which characters share an account — the only linkage anyone can know is
-  for characters whose owner has personally authenticated them into SeAT
-  (main + alts). A corp member who's active but has never logged into SeAT
-  simply has nothing to consolidate under and won't appear on Rankings,
-  regardless of how much activity they generate. This improves automatically
-  as more members register their characters in SeAT.
+- **Scoped to registered SeAT members**: EVE's ESI never reveals which
+  characters share an account — the only linkage anyone can know is for
+  characters whose owner has personally authenticated them into SeAT (main +
+  alts). A corp member who's active but has never logged into SeAT simply has
+  nothing to consolidate under and won't appear on Corporation View or My
+  Activities, regardless of how much activity they generate. This improves
+  automatically as more members register their characters in SeAT.
 
 ## Troubleshooting
 
