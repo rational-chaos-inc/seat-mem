@@ -18,12 +18,18 @@ use RCI\MemberEngagement\Services\AccountConsolidationService;
  */
 class DiagnosePvpCommand extends Command
 {
-    protected $signature = 'member-engagement:diagnose-pvp {--month= : YYYY-MM, defaults to the current month}';
+    protected $signature = 'member-engagement:diagnose-pvp
+        {--month= : YYYY-MM, defaults to the current month}
+        {--killmail= : Trace one specific killmail_id (e.g. from zkillboard) through the whole pipeline instead of summarizing a month}';
 
     protected $description = 'Diagnose why PvP Kills / Fleet Participation may be showing empty on Corporation View';
 
     public function handle(AccountConsolidationService $consolidation): int
     {
+        if ($killmailId = $this->option('killmail')) {
+            return $this->traceKillmail((int) $killmailId, $consolidation);
+        }
+
         $month = $this->option('month')
             ? Carbon::parse($this->option('month') . '-01')->startOfMonth()
             : Carbon::now()->startOfMonth();
@@ -134,6 +140,79 @@ class DiagnosePvpCommand extends Command
         $this->newLine();
 
         $this->info('Diagnosis complete.');
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Traces one real killmail_id (e.g. copied from zkillboard) through
+     * every stage this plugin depends on, to show exactly where it stops
+     * showing up - independent of any month-wide aggregate counts.
+     */
+    private function traceKillmail(int $killmailId, AccountConsolidationService $consolidation): int
+    {
+        $this->info("Tracing killmail {$killmailId}");
+        $this->newLine();
+
+        // [1] Does SeAT's own sync even have this killmail?
+        $detail = DB::table('killmail_details')->where('killmail_id', $killmailId)->first();
+
+        $this->line('[1] SeAT core killmail sync');
+        if (!$detail) {
+            $this->warn("    killmail_details has NO row for {$killmailId}.");
+            $this->warn('    => SeAT itself never synced this kill. This plugin only reads from' .
+                ' killmail_details/killmail_attackers/killmail_victims - it never calls ESI for' .
+                ' killmails directly. Check SeAT\'s own killmail sync (ESI killmail scope granted' .
+                ' on at least one character/corp role, the sync job actually running, and that it' .
+                ' has reached back far enough to cover this killmail\'s date).');
+            $this->newLine();
+            $this->info('Trace stops here - nothing downstream can work without this row.');
+            return self::SUCCESS;
+        }
+        $this->line("    killmail_time: {$detail->killmail_time}");
+
+        // [2] Attackers and victim on this specific killmail
+        $attackers = DB::table('killmail_attackers')
+            ->where('killmail_id', $killmailId)
+            ->get(['character_id', 'corporation_id', 'final_blow']);
+        $victim = DB::table('killmail_victims')->where('killmail_id', $killmailId)->first();
+
+        $this->newLine();
+        $this->line('[2] Attackers / victim on this killmail');
+        $this->line("    Attacker rows: {$attackers->count()} (attacker_count used for Fleet Participation)");
+        foreach ($attackers as $attacker) {
+            $finalBlow = $attacker->final_blow ? ' (final blow)' : '';
+            $this->line("      - character_id {$attacker->character_id}, corp {$attacker->corporation_id}{$finalBlow}");
+        }
+        if ($victim) {
+            $this->line("    Victim: character_id {$victim->character_id}, corp {$victim->corporation_id}");
+        }
+
+        // [3] Did this plugin turn each attacker into an Activity row?
+        $this->newLine();
+        $this->line('[3] This plugin\'s Activity records (member-engagement:sync)');
+        $attackerCharacterIds = $attackers->pluck('character_id')->filter()->values();
+        foreach ($attackerCharacterIds as $characterId) {
+            $sourceId = "kill_{$killmailId}_{$characterId}";
+            $exists = Activity::where('source_id', $sourceId)->exists();
+            $this->line('    character_id ' . $characterId . ': ' . ($exists ? 'Activity row exists' : 'MISSING - not synced'));
+        }
+        if ($victim) {
+            $lossSourceId = "loss_{$killmailId}_{$victim->character_id}";
+            $lossExists = Activity::where('source_id', $lossSourceId)->exists();
+            $this->line('    victim ' . $victim->character_id . ' (loss): ' . ($lossExists ? 'Activity row exists' : 'MISSING - not synced'));
+        }
+
+        // [4] Registered-SeAT-account scoping
+        $this->newLine();
+        $this->line('[4] Registered-SeAT-account scoping (Corporation View only shows these)');
+        $groupMap = $attackerCharacterIds->isEmpty() ? [] : $consolidation->resolveGroups($attackerCharacterIds->all());
+        foreach ($attackerCharacterIds as $characterId) {
+            $status = isset($groupMap[$characterId])
+                ? "registered (consolidates under main character_id {$groupMap[$characterId]})"
+                : 'NOT linked to any SeAT account - excluded from Corporation View by design';
+            $this->line("    character_id {$characterId}: {$status}");
+        }
 
         return self::SUCCESS;
     }
