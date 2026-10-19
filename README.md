@@ -13,8 +13,8 @@ on a Corporation View, plus each member's own figures on My Activities.
 - **PvE Bounty & Tax** — bounty prizes and daily goal payouts, attributed to
   the character who earned them
 - **Industry Tax** — facility tax from industry jobs, attributed to the
-  character who ran the job (cross-referenced from the wallet entry's Job ID
-  against SeAT's industry job cache)
+  character who ran the job (ESI gives this directly on the wallet entry
+  itself, as the paying character)
 - **Character/corporation/alliance name resolution** — most characters never
   get a local SeAT record (SeAT only syncs characters that have authenticated
   directly), so this plugin resolves names via ESI's public endpoints in the
@@ -40,7 +40,8 @@ on a Corporation View, plus each member's own figures on My Activities.
 - PHP 8.1+
 - Corp Wallet Manager (or equivalent) already syncing
   `corporation_wallet_journals` for the corporation(s) you want to track
-- Killmail and industry job syncing enabled in SeAT (standard SeAT/ESI setup)
+- Killmail syncing enabled in SeAT (standard SeAT/ESI setup) - Industry Tax
+  only needs the corp wallet journal, not industry job syncing
 - The `esi-location.read_online.v1` scope granted on each character's SSO
   login, for the Heartbeat list - SeAT core syncs this into
   `character_onlines` on its normal character update cycle; without the
@@ -145,9 +146,6 @@ return [
 
 ## Known Limitations
 
-- **Industry Tax coverage**: SeAT's local industry job cache only retains a
-  limited window of jobs. Wallet tax entries whose job has aged out of that
-  cache can't be attributed to a character and are skipped (not guessed at).
 - **Name resolution takes time on a fresh install**: at 1000 characters per
   20-minute cycle, a corporation with several thousand distinct characters in
   its activity history will take a few hours to fully resolve. Run

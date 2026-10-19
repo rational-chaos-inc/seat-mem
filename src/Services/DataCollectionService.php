@@ -252,15 +252,13 @@ class DataCollectionService
     }
 
     /**
-     * Industry facility tax entries (ref_type industry_job_tax) are between two
-     * corporations (first_party_id/second_party_id are both corporation IDs, not
-     * characters), so there's no character to attribute directly from the wallet
-     * entry itself. The description includes the originating Job ID though
-     * ("Industry facility tax between X and Y (Job ID: 123456)"), which we cross-
-     * reference against corporation_industry_jobs.installer_id to find the
-     * character who actually ran the job. SeAT's local job cache only retains a
-     * limited window of jobs, so older tax entries may not resolve - those are
-     * skipped rather than attributed to the wrong (or no) character.
+     * Industry facility tax entries (ref_type industry_job_tax) are charged
+     * to the character who installed the job, paid to the corporation that
+     * owns the taxing structure - ESI gives this directly as first_party_id
+     * (the installing character) / second_party_id (the structure's owning
+     * corporation) on the wallet entry itself, confirmed against a real
+     * entry's description ("Industry facility tax between <character name>
+     * and <corp name>"). No Job ID cross-reference needed.
      */
     private function collectIndustryTaxData(?Carbon $since = null): int
     {
@@ -276,24 +274,8 @@ class DataCollectionService
                 ->orderBy('date', 'desc')
                 ->get();
 
-            $jobIds = [];
             foreach ($entries as $entry) {
-                if ($entry->description && preg_match('/Job ID:\s*(\d+)/', $entry->description, $matches)) {
-                    $jobIds[] = (int) $matches[1];
-                }
-            }
-
-            $installerByJobId = DB::table('corporation_industry_jobs')
-                ->whereIn('job_id', array_unique($jobIds))
-                ->pluck('installer_id', 'job_id');
-
-            foreach ($entries as $entry) {
-                if (!$entry->description || !preg_match('/Job ID:\s*(\d+)/', $entry->description, $matches)) {
-                    continue;
-                }
-
-                $jobId = (int) $matches[1];
-                $characterId = $installerByJobId[$jobId] ?? null;
+                $characterId = $entry->first_party_id;
                 if (!$characterId) {
                     continue;
                 }
@@ -311,7 +293,6 @@ class DataCollectionService
                             'amount' => abs($entry->amount ?? 0),
                             'ref_type' => $entry->ref_type,
                             'description' => $entry->description,
-                            'job_id' => $jobId,
                         ],
                     ]
                 );
