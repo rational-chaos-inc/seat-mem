@@ -109,7 +109,13 @@ class AccountConsolidationService
      */
     public function allAccountGroups(): array
     {
-        $users = DB::table('users')->whereNotNull('main_character_id')->get(['id', 'main_character_id']);
+        // main_character_id = 0 is SeAT's own sentinel for accounts with no
+        // real EVE character attached (e.g. the built-in "admin" superuser)
+        // - treat that the same as null, not as a character to track.
+        $users = DB::table('users')
+            ->whereNotNull('main_character_id')
+            ->where('main_character_id', '>', 0)
+            ->get(['id', 'main_character_id']);
         if ($users->isEmpty()) {
             return [];
         }
