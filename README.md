@@ -41,6 +41,11 @@ on a Corporation View, plus each member's own figures on My Activities.
 - Corp Wallet Manager (or equivalent) already syncing
   `corporation_wallet_journals` for the corporation(s) you want to track
 - Killmail and industry job syncing enabled in SeAT (standard SeAT/ESI setup)
+- The `esi-location.read_online.v1` scope granted on each character's SSO
+  login, for the Heartbeat list - SeAT core syncs this into
+  `character_onlines` on its normal character update cycle; without the
+  scope that table stays empty for that character and they'll show as
+  "Never" logged in regardless of actual activity
 - Outbound HTTPS access from the SeAT containers to `esi.evetech.net` (name
   resolution calls ESI directly; no API key needed, these are public endpoints)
 
@@ -155,6 +160,14 @@ return [
   nothing to consolidate under and won't appear on Corporation View or My
   Activities, regardless of how much activity they generate. This improves
   automatically as more members register their characters in SeAT.
+- **Heartbeat can't backfill history**: ESI's online endpoint (and SeAT's
+  `character_onlines` sync of it) only ever holds each character's MOST
+  RECENT known login/logout, not a history. A day is only ever recorded as
+  "logged in" if this plugin's own scheduled sync happened to run while
+  that login was still the most recent one on record - once a later login
+  overwrites it, that day is gone for good. This means Heartbeat becomes
+  accurate from when it was first deployed, but can't retroactively
+  reconstruct days further back than that.
 
 ## Troubleshooting
 
