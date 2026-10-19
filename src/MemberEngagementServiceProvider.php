@@ -98,6 +98,7 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
             \RCI\MemberEngagement\Commands\GenerateTestDataCommand::class,
             \RCI\MemberEngagement\Commands\ResolveNamesCommand::class,
             \RCI\MemberEngagement\Commands\FinalizeMonthCommand::class,
+            \RCI\MemberEngagement\Commands\DiagnosePvpCommand::class,
         ]);
     }
 
