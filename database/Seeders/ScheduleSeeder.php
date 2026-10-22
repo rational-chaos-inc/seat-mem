@@ -13,7 +13,7 @@ class ScheduleSeeder extends AbstractScheduleSeeder
     {
         return [
             [
-                'command' => 'member-engagement:sync --days=2',
+                'command' => 'member-engagement:sync',
                 'expression' => '*/15 * * * *',  // Every 15 minutes
                 'allow_overlap' => false,
                 'allow_maintenance' => false,
@@ -21,7 +21,7 @@ class ScheduleSeeder extends AbstractScheduleSeeder
                 'ping_after' => null,
             ],
             [
-                'command' => 'member-engagement:aggregate --days=3',
+                'command' => 'member-engagement:aggregate',
                 'expression' => '*/30 * * * *',  // Every 30 minutes
                 'allow_overlap' => false,
                 'allow_maintenance' => false,
@@ -55,6 +55,11 @@ class ScheduleSeeder extends AbstractScheduleSeeder
         return [
             'member-engagement:collect-activities',
             'member-engagement:check-alerts',
+            // Superseded by the self-sizing window - these pinned the
+            // lookback so narrowly that any gap older than it was never
+            // revisited.
+            'member-engagement:sync --days=2',
+            'member-engagement:aggregate --days=3',
         ];
     }
 }

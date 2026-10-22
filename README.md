@@ -119,13 +119,20 @@ Registered automatically once the plugin boots:
 
 | Command | Schedule | Purpose |
 |---|---|---|
-| `member-engagement:sync --days=2` | every 15 min | Pull new activity from SeAT's locally-synced mining/killmail/wallet data |
-| `member-engagement:aggregate --days=3` | every 30 min | Roll activities up into daily per-character stats |
+| `member-engagement:sync` | every 15 min | Pull new activity from SeAT's locally-synced mining/killmail/wallet data |
+| `member-engagement:aggregate` | every 30 min | Roll activities up into daily per-character stats |
 | `member-engagement:resolve-names --limit=1000` | every 20 min | Resolve character/corp/alliance names via ESI |
 | `member-engagement:finalize-month` | 02:15 on the 1st of the month | Roll the month that just ended into a finalized monthly snapshot |
 
-Each is also runnable manually, e.g. `php artisan member-engagement:sync --days=90`
-for a larger backfill on first install. Run
+`sync` and `aggregate` size their own lookback window: normally they cover
+the last couple of days, but each records when it last completed, and if
+more than a day has passed (scheduler down, a bug fixed, ESI outage) the
+next run widens the window to cover the gap plus a day, up to 90 days. That
+way gaps close themselves rather than needing a manual backfill.
+
+Passing `--days` explicitly overrides that, e.g.
+`php artisan member-engagement:sync --days=90` for a larger backfill on
+first install. Run
 `php artisan member-engagement:finalize-month --all` once after installing to
 backfill finalized monthly snapshots for every month that already has daily
 stats data (the current, in-progress month is always computed live instead,

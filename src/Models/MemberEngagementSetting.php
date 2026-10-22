@@ -25,6 +25,8 @@ class MemberEngagementSetting extends Model
         'pvp_weight',
         'fleet_participation_weight',
         'fleet_participation_min_size',
+        'last_sync_at',
+        'last_aggregate_at',
     ];
 
     protected $casts = [
@@ -34,6 +36,8 @@ class MemberEngagementSetting extends Model
         'pvp_weight' => 'decimal:2',
         'fleet_participation_weight' => 'decimal:2',
         'fleet_participation_min_size' => 'integer',
+        'last_sync_at' => 'datetime',
+        'last_aggregate_at' => 'datetime',
     ];
 
     public static function current(): self
