@@ -14,7 +14,7 @@
     @if(empty($rows))
         <div class="alert alert-info">No data for this month</div>
     @else
-        <table class="table table-sm table-striped table-hover">
+        <table class="table table-sm table-striped table-hover me-sortable">
             <thead>
                 <tr>
                     <th>#</th>

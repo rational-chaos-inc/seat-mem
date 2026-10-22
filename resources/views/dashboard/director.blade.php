@@ -136,7 +136,7 @@
                         <code>php artisan member-engagement:snapshot-net-worth</code> to take one now.
                     </div>
                 @else
-                    <table class="table table-sm table-striped table-hover">
+                    <table class="table table-sm table-striped table-hover me-sortable">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -223,7 +223,7 @@
                 @else
                     <div class="row">
                         <div class="col-lg-7">
-                            <table class="table table-sm table-striped table-hover w-auto" id="home-presence-table">
+                            <table class="table table-sm table-striped table-hover w-auto me-sortable" id="home-presence-table">
                                 <thead>
                                     <tr>
                                         <th>#</th>
@@ -290,7 +290,7 @@
                 @if(empty($heartbeat))
                     <div class="alert alert-info">No registered accounts to show</div>
                 @else
-                    <table class="table table-sm table-striped table-hover">
+                    <table class="table table-sm table-striped table-hover me-sortable">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -503,6 +503,83 @@
 
         // Open on the least-present account - the one worth looking at.
         rows.first().trigger('click');
+    });
+</script>
+<script type="text/javascript">
+    // Click any column header on the Corporation View tables to sort by it.
+    // Rows are moved rather than re-rendered, so the Home Presence row
+    // handlers and their data attributes survive a sort.
+    $(function () {
+        function cellValue(row, index) {
+            var text = $(row).children('td').eq(index).text().trim();
+
+            // Numbers first: strips thousands separators, %, and ISK.
+            var numeric = text.replace(/[,%\s]/g, '').replace(/ISK/i, '');
+            if (numeric !== '' && !isNaN(numeric)) {
+                return { type: 'number', value: parseFloat(numeric) };
+            }
+
+            // dd/mm/yyyy, so "Last Login" sorts chronologically.
+            var date = text.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+            if (date) {
+                return { type: 'number', value: Date.UTC(+date[3], date[2] - 1, +date[1]) };
+            }
+
+            // "Logged in today" has to outrank every real date.
+            if (/logged in today/i.test(text)) {
+                return { type: 'number', value: Date.now() };
+            }
+            if (/never/i.test(text)) {
+                return { type: 'number', value: -1 };
+            }
+
+            return { type: 'text', value: text.toLowerCase() };
+        }
+
+        $('table.me-sortable').each(function () {
+            var table = $(this);
+            var headers = table.find('thead th');
+            var rankColumn = headers.first().text().trim() === '#';
+
+            headers.each(function (index) {
+                // The rank column just numbers whatever order we're in.
+                if (rankColumn && index === 0) {
+                    return;
+                }
+
+                var header = $(this);
+                header.css('cursor', 'pointer').attr('title', 'Sort by ' + header.text().trim());
+
+                header.on('click', function () {
+                    var ascending = header.data('sortAsc') !== true;
+                    headers.data('sortAsc', null).find('.me-sort-caret').remove();
+                    header.data('sortAsc', ascending);
+                    header.append(' <span class="me-sort-caret small text-muted">'
+                        + (ascending ? '&uarr;' : '&darr;') + '</span>');
+
+                    var body = table.children('tbody');
+                    body.children('tr').get()
+                        .sort(function (a, b) {
+                            var left = cellValue(a, index);
+                            var right = cellValue(b, index);
+                            var result = left.type === 'number' && right.type === 'number'
+                                ? left.value - right.value
+                                : String(left.value).localeCompare(String(right.value));
+
+                            return ascending ? result : -result;
+                        })
+                        .forEach(function (row) {
+                            body.append(row);
+                        });
+
+                    if (rankColumn) {
+                        body.children('tr').each(function (position) {
+                            $(this).children('td').eq(0).text(position + 1);
+                        });
+                    }
+                });
+            });
+        });
     });
 </script>
 @endpush
