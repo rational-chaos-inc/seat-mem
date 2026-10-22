@@ -19,4 +19,8 @@ Route::middleware(['web', 'auth', 'verified'])
             ->name('settings');
         Route::post('/settings', [SettingsController::class, 'store'])
             ->name('settings.store');
+        Route::post('/settings/home-regions/add', [SettingsController::class, 'addHomeRegion'])
+            ->name('settings.home-regions.add');
+        Route::post('/settings/home-regions/remove', [SettingsController::class, 'removeHomeRegion'])
+            ->name('settings.home-regions.remove');
     });

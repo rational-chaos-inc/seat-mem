@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Console\Command;
 use RCI\MemberEngagement\Models\DailyMemberStat;
 use RCI\MemberEngagement\Services\MonthlyAggregationService;
+use RCI\MemberEngagement\Services\NetWorthService;
 
 class FinalizeMonthCommand extends Command
 {
@@ -15,7 +16,7 @@ class FinalizeMonthCommand extends Command
 
     protected $description = 'Roll up daily member stats into finalized monthly totals';
 
-    public function handle(MonthlyAggregationService $service): int
+    public function handle(MonthlyAggregationService $service, NetWorthService $netWorth): int
     {
         if ($this->option('all')) {
             $months = DailyMemberStat::selectRaw("DISTINCT DATE_FORMAT(date, '%Y-%m-01') as month")
@@ -25,7 +26,8 @@ class FinalizeMonthCommand extends Command
             foreach ($months as $monthStr) {
                 $month = Carbon::parse($monthStr);
                 $count = $service->finalizeMonth($month);
-                $this->info("{$month->format('Y-m')}: {$count} member records");
+                $netWorthCount = $netWorth->finalizeMonth($month);
+                $this->info("{$month->format('Y-m')}: {$count} member records, {$netWorthCount} net worth records");
             }
 
             return self::SUCCESS;
@@ -38,7 +40,8 @@ class FinalizeMonthCommand extends Command
 
         $this->info("Finalizing {$month->format('Y-m')}...");
         $count = $service->finalizeMonth($month);
-        $this->info("Finalized {$count} member records for {$month->format('Y-m')}");
+        $netWorthCount = $netWorth->finalizeMonth($month);
+        $this->info("Finalized {$count} member records and {$netWorthCount} net worth records for {$month->format('Y-m')}");
 
         return self::SUCCESS;
     }

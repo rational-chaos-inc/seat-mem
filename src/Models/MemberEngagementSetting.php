@@ -27,6 +27,8 @@ class MemberEngagementSetting extends Model
         'fleet_participation_min_size',
         'last_sync_at',
         'last_aggregate_at',
+        'minimum_home_presence',
+        'home_regions',
     ];
 
     protected $casts = [
@@ -38,6 +40,8 @@ class MemberEngagementSetting extends Model
         'fleet_participation_min_size' => 'integer',
         'last_sync_at' => 'datetime',
         'last_aggregate_at' => 'datetime',
+        'minimum_home_presence' => 'integer',
+        'home_regions' => 'array',
     ];
 
     public static function current(): self
@@ -55,6 +59,8 @@ class MemberEngagementSetting extends Model
             'pvp_weight' => 1.0,
             'fleet_participation_weight' => 1.0,
             'fleet_participation_min_size' => 5,
+            'minimum_home_presence' => 80,
+            'home_regions' => [],
         ]);
     }
 }

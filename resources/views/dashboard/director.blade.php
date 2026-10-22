@@ -122,6 +122,136 @@
 
         <div class="card">
             <div class="card-header">
+                <h4 class="card-title">Net Worth</h4>
+                <div class="card-tools pull-right">
+                    @if($netWorthTakenAt)
+                        <span class="small text-muted">Snapshot taken {{ $netWorthTakenAt->format('d/m/Y') }}</span>
+                    @endif
+                </div>
+            </div>
+            <div class="card-body">
+                @if(empty($netWorth))
+                    <div class="alert alert-info">
+                        No snapshot recorded yet - this is captured once a day at 04:23 UTC, or run
+                        <code>php artisan member-engagement:snapshot-net-worth</code> to take one now.
+                    </div>
+                @else
+                    <table class="table table-sm table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Member</th>
+                                <th class="text-right">Net Worth</th>
+                                <th class="text-right">Assets</th>
+                                <th class="text-right">Wallet</th>
+                                <th class="text-right">Home Presence</th>
+                                <th class="text-right">Change vs Last Month</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($netWorth as $row)
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>
+                                        {{ $row->display_name }}
+                                        @if($row->member_count > 1)
+                                            <span class="badge badge-secondary" title="Consolidated characters">{{ $row->member_count }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-right">{{ number_format($row->net_worth) }}</td>
+                                    <td class="text-right">{{ number_format($row->asset_value) }}</td>
+                                    <td class="text-right">{{ number_format($row->wallet_balance) }}</td>
+                                    <td class="text-right">
+                                        @if($row->home_presence === null)
+                                            <span class="text-muted">-</span>
+                                        @elseif($row->below_threshold)
+                                            <span class="badge badge-danger">{{ number_format($row->home_presence, 1) }}%</span>
+                                        @else
+                                            {{ number_format($row->home_presence, 1) }}%
+                                        @endif
+                                    </td>
+                                    <td class="text-right">
+                                        @if($row->change_percent === null)
+                                            <span class="text-muted">-</span>
+                                        @else
+                                            <span @class(['text-danger' => $row->change_percent < 0, 'text-success' => $row->change_percent > 0])>
+                                                {{ $row->change_percent > 0 ? '+' : '' }}{{ number_format($row->change_percent, 1) }}%
+                                            </span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    <p class="small text-muted mb-0">
+                        Assets are priced against SeAT's market data, excluding blueprint copies.
+                        Wallet balances are personal wallets only, not corporation wallets.
+                    </p>
+                @endif
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Home Presence</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    Share of each account's asset value sitting in
+                    @if(empty($homeRegionNames))
+                        <strong>no regions yet</strong> - set your home regions on the Settings page.
+                    @else
+                        <strong>{{ implode(', ', $homeRegionNames) }}</strong>.
+                    @endif
+                    Anything below {{ $minimumHomePresence }}% is highlighted. Least present accounts first.
+                </p>
+
+                @php
+                    $placedAccounts = collect($netWorth)->filter(fn($r) => $r->home_presence !== null)->sortBy('home_presence');
+                @endphp
+
+                @if($placedAccounts->isEmpty() || empty($homeRegionNames))
+                    <div class="alert alert-info">Nothing to compare yet</div>
+                @else
+                    <table class="table table-sm table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Member</th>
+                                <th class="text-right">Home Presence</th>
+                                <th class="text-right">Value at Home</th>
+                                <th class="text-right">Value Elsewhere</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($placedAccounts as $row)
+                                <tr @class(['table-danger' => $row->below_threshold])>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>
+                                        {{ $row->display_name }}
+                                        @if($row->member_count > 1)
+                                            <span class="badge badge-secondary" title="Consolidated characters">{{ $row->member_count }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-right">
+                                        @if($row->below_threshold)
+                                            <span class="badge badge-danger">{{ number_format($row->home_presence, 1) }}%</span>
+                                        @else
+                                            {{ number_format($row->home_presence, 1) }}%
+                                        @endif
+                                    </td>
+                                    <td class="text-right">{{ number_format($row->value_at_home) }}</td>
+                                    <td class="text-right">{{ number_format($row->value_elsewhere) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
                 <h4 class="card-title">Heartbeat</h4>
             </div>
             <div class="card-body">
