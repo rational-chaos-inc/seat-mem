@@ -43,6 +43,7 @@ class NetWorthService
     /** Categorical slots 1-3, plus a neutral for the folded tail. */
     private const SLICE_COLOURS = ['#2a78d6', '#eb6834', '#1baf7a'];
     private const OTHER_COLOUR = '#8a8a85';
+    private const UNKNOWN_COLOUR = '#c9c8c0';
 
     public function __construct(
         private AccountConsolidationService $consolidation,
@@ -225,6 +226,8 @@ class NetWorthService
     /**
      * Turns each account's raw region map into something presentable: every
      * region named and ranked, plus the handful of slices the pie draws.
+     * Percentages are of everything the account holds, unresolved included,
+     * so the slices total 100%.
      */
     private function attachRegionBreakdown(Collection $accounts): void
     {
@@ -238,11 +241,8 @@ class NetWorthService
             : DB::table('regions')->whereIn('region_id', $regionIds)->pluck('name', 'region_id');
 
         foreach ($accounts as $account) {
-            // Measured against placed value, the same denominator home
-            // presence uses - otherwise an account with a big unresolved
-            // chunk shows a home region at (say) 70% in the chart next to
-            // 93% in the table, which just reads as a bug.
-            $placed = $account->value_placed;
+            $unresolved = (float) ($account->regions[self::UNKNOWN_REGION] ?? 0);
+            $total = $account->value_placed + $unresolved;
 
             $breakdown = collect($account->regions)
                 ->except([self::UNKNOWN_REGION])
@@ -250,7 +250,7 @@ class NetWorthService
                     'region_id' => $regionId,
                     'name' => $names[$regionId] ?? "Region {$regionId}",
                     'value' => (float) $value,
-                    'percent' => $placed > 0 ? ((float) $value / $placed) * 100 : 0,
+                    'percent' => $total > 0 ? ((float) $value / $total) * 100 : 0,
                 ])
                 ->sortByDesc('value')
                 ->values();
@@ -272,8 +272,22 @@ class NetWorthService
                 ];
             }
 
+            // Shown last, and in its own neutral rather than a categorical
+            // hue - it isn't a place, it's the bit we couldn't place. The
+            // home presence figure still ignores it, which is why the chart
+            // caption spells the difference out.
+            if ($unresolved > 0) {
+                $slices[] = [
+                    'region_id' => self::UNKNOWN_REGION,
+                    'name' => 'Unknown location',
+                    'value' => $unresolved,
+                    'percent' => $total > 0 ? ($unresolved / $total) * 100 : 0,
+                    'colour' => self::UNKNOWN_COLOUR,
+                ];
+            }
+
             $account->chart_slices = $slices;
-            $account->unresolved_value = (float) ($account->regions[self::UNKNOWN_REGION] ?? 0);
+            $account->unresolved_value = $unresolved;
         }
     }
 

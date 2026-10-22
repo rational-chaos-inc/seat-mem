@@ -235,6 +235,7 @@
                                             style="cursor: pointer;"
                                             data-member="{{ $row->display_name }}"
                                             data-unresolved="{{ (int) $row->unresolved_value }}"
+                                            data-home="{{ number_format($row->home_presence, 1) }}"
                                             data-slices="{{ json_encode($row->chart_slices) }}">
                                             <td>{{ $loop->iteration }}</td>
                                             <td>
@@ -340,16 +341,17 @@
             return $('<div>').text(text).html();
         }
 
-        function render(member, slices, unresolved) {
+        function render(member, slices, unresolved, home) {
             $('#me-region-title').text('Assets by region - ' + member);
 
-            // Shown as a caption rather than a slice: unresolved assets are
-            // excluded from these percentages, exactly as they are from the
-            // home presence figure in the table.
+            // These slices are of everything held. Home presence ignores
+            // the unknown slice, so when there is one the two figures
+            // differ - say why rather than leaving it looking wrong.
             $('#me-region-note').text(
                 unresolved > 0
-                    ? 'Excludes ' + Math.round(unresolved).toLocaleString()
-                        + ' ISK in locations SeAT could not resolve.'
+                    ? 'Home presence (' + home + '%) is measured against located assets only, '
+                        + 'so it ignores the ' + Math.round(unresolved).toLocaleString()
+                        + ' ISK SeAT could not place.'
                     : ''
             );
 
@@ -406,7 +408,7 @@
             var row = $(this);
             rows.removeClass('table-active');
             row.addClass('table-active');
-            render(row.data('member'), row.data('slices'), row.data('unresolved'));
+            render(row.data('member'), row.data('slices'), row.data('unresolved'), row.data('home'));
         });
 
         // Open on the least-present account - the one worth looking at.
