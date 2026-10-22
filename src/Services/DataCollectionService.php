@@ -252,13 +252,25 @@ class DataCollectionService
     }
 
     /**
+     * EVE reserves 98,000,000-98,999,999 for corporations and
+     * 99,000,000-99,999,999 for alliances; character IDs never fall inside
+     * that band.
+     */
+    private const CORP_ALLIANCE_ID_MIN = 98000000;
+    private const CORP_ALLIANCE_ID_MAX = 99999999;
+
+    /**
      * Industry facility tax entries (ref_type industry_job_tax) are charged
-     * to the character who installed the job, paid to the corporation that
-     * owns the taxing structure - ESI gives this directly as first_party_id
-     * (the installing character) / second_party_id (the structure's owning
-     * corporation) on the wallet entry itself, confirmed against a real
-     * entry's description ("Industry facility tax between <character name>
-     * and <corp name>"). No Job ID cross-reference needed.
+     * to whoever installed the job, paid to the corporation that owns the
+     * taxing structure - ESI gives this directly as first_party_id (the
+     * installer) / second_party_id (the structure's owning corporation) on
+     * the wallet entry itself, so no Job ID cross-reference is needed.
+     *
+     * The installer isn't always a character though: a job run at the
+     * corporation's own structure lists the corporation on both sides and
+     * just shuffles ISK between its wallet divisions, writing the same
+     * journal id twice (once positive, once negative). Those have no member
+     * to attribute to and are skipped.
      */
     private function collectIndustryTaxData(?Carbon $since = null): int
     {
@@ -277,6 +289,10 @@ class DataCollectionService
             foreach ($entries as $entry) {
                 $characterId = $entry->first_party_id;
                 if (!$characterId) {
+                    continue;
+                }
+
+                if ($characterId >= self::CORP_ALLIANCE_ID_MIN && $characterId <= self::CORP_ALLIANCE_ID_MAX) {
                     continue;
                 }
 
