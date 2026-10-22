@@ -31,9 +31,10 @@ on a Corporation View, plus each member's own figures on My Activities.
   last logged in if not today — surfaces inactive members even if they have
   zero activity to otherwise show up in
 - **Net Worth** — a daily snapshot of each account's asset value (priced
-  against SeAT's market data, excluding blueprint copies) plus personal
-  wallet balance, consolidated across main + alts, with month-on-month
-  change. Assets are resolved to the region they actually sit in, which
+  against SeAT's market data, excluding blueprint copies) plus ISK and PLEX,
+  consolidated across main + alts, with month-on-month change. PLEX counts as
+  currency rather than an asset: it lives in the account-wide vault, so it has
+  no region and would otherwise sit in the unknown bucket. Assets are resolved to the region they actually sit in, which
   means walking the containment tree - most assets are nested inside ships
   and containers, and ESI reports Upwell structures as items too
 - **Home Presence** — what share of an account's asset value sits in the
