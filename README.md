@@ -164,9 +164,14 @@ return [
 - **Net worth has no history before it starts**: SeAT only stores assets as
   they are right now, so the month-on-month change column stays blank until
   two months of snapshots have accumulated. Nothing can backfill it.
-- **Asset values are estimates**: priced from ESI's `average_price`, so they
-  won't match a market tool exactly. Blueprint copies are excluded entirely -
-  they price as originals, which on the dev data inflated the total by 4.5x.
+- **Asset values are estimates**: priced from ESI's `average_price`, falling
+  back to the SDE's `invTypes.basePrice` where an item has no market price at
+  all (supercarriers and the like can't be traded in Jita, so they'd
+  otherwise count as worthless). Ships take the higher of the two, since thin
+  markets understate capitals; that floor is not applied to other categories,
+  where `basePrice` bears no relation to market value. Blueprint copies are
+  excluded entirely - they price as originals, which on the dev data inflated
+  the total by 4.5x.
   Assets in structures SeAT can't resolve are grouped as "unknown" and left
   out of the home presence calculation rather than counted as away.
 - **Heartbeat can't backfill history**: ESI's online endpoint (and SeAT's
