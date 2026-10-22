@@ -52,33 +52,18 @@ on a Corporation View, plus each member's own figures on My Activities.
 
 ## Installation
 
-The package isn't on Packagist yet, so install it via a VCS repository
-pointing at this GitHub repo.
+The package is published on Packagist as `rci/member-engagement`.
 
-1. **Add the repository and require the package**
+1. **Install the package**
 
-   In your SeAT installation's `composer.json`:
-   ```json
-   "repositories": [
-       {
-           "type": "vcs",
-           "url": "https://github.com/rational-chaos-inc/seat-mem.git"
-       }
-   ]
-   ```
    ```bash
    composer require rci/member-engagement
    ```
 
    If you're running the official `eveseat/docker` compose setup, add
-   `rci/member-engagement` to the `SEAT_PLUGINS` env var instead — but note
-   the `repositories` entry above still needs to be present in the image's
-   `composer.json` for that to resolve, since the package isn't on Packagist.
-   The simplest way to do that in the docker setup today is the `packages/`
-   dev-install path it already supports (mount this repo under
-   `packages/member-engagement` and add a `packages/override.json` declaring
-   the autoload/provider) — ask if you want help wiring that up for a
-   specific docker-compose layout.
+   `rci/member-engagement` to the `SEAT_PLUGINS` env var instead and
+   recreate the containers (`docker compose up -d`, not `restart` — env
+   changes only apply on recreate).
 
 2. **Run migrations**
    ```bash
