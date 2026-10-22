@@ -101,14 +101,14 @@
                     @include('member-engagement::dashboard.partials.leaderboard', [
                         'rows' => $rankings['losses'],
                         'field' => 'pvp_losses',
-                        'heading' => 'Losses',
+                        'heading' => 'Top PvP (Losses)',
                         'subtitle' => 'Killmails the member was the victim on',
                         'valueLabel' => 'Losses',
                     ])
                     @include('member-engagement::dashboard.partials.leaderboard', [
                         'rows' => $rankings['isk_lost'],
                         'field' => 'isk_lost',
-                        'heading' => 'ISK Lost',
+                        'heading' => 'Top PvP (ISK Lost)',
                         'subtitle' => 'Value of ships and fittings lost',
                         'valueLabel' => 'ISK',
                     ])
