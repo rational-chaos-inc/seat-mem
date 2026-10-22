@@ -30,9 +30,19 @@ on a Corporation View, plus each member's own figures on My Activities.
   this month they've logged in (main + linked alts combined), and when they
   last logged in if not today — surfaces inactive members even if they have
   zero activity to otherwise show up in
+- **Net Worth** — a daily snapshot of each account's asset value (priced
+  against SeAT's market data, excluding blueprint copies) plus personal
+  wallet balance, consolidated across main + alts, with month-on-month
+  change. Assets are resolved to the region they actually sit in, which
+  means walking the containment tree - most assets are nested inside ships
+  and containers, and ESI reports Upwell structures as items too
+- **Home Presence** — what share of an account's asset value sits in the
+  regions you've designated as home. Anything below the configured minimum
+  (default 80%) is highlighted
 - **Settings page** — a single set of per-metric visibility (Directors /
-  Members / Both), weighting, and Fleet Participation minimum size, applying
-  to the whole install regardless of corporation
+  Members / Both), weighting, Fleet Participation minimum size, the home
+  presence minimum, and the managed list of home regions, applying to the
+  whole install regardless of corporation
 
 ## Prerequisites
 
@@ -107,7 +117,8 @@ Registered automatically once the plugin boots:
 | `member-engagement:sync` | every 15 min | Pull new activity from SeAT's locally-synced mining/killmail/wallet data |
 | `member-engagement:aggregate` | every 30 min | Roll activities up into daily per-character stats |
 | `member-engagement:resolve-names --limit=1000` | every 20 min | Resolve character/corp/alliance names via ESI |
-| `member-engagement:finalize-month` | 02:15 on the 1st of the month | Roll the month that just ended into a finalized monthly snapshot |
+| `member-engagement:snapshot-net-worth` | 04:23 daily | Record each account's asset value, wallet balance and asset regions |
+| `member-engagement:finalize-month` | 02:15 on the 1st of the month | Roll the month that just ended into a finalized monthly snapshot, net worth included |
 
 `sync` and `aggregate` size their own lookback window: normally they cover
 the last couple of days, but each records when it last completed, and if
@@ -150,6 +161,14 @@ return [
   nothing to consolidate under and won't appear on Corporation View or My
   Activities, regardless of how much activity they generate. This improves
   automatically as more members register their characters in SeAT.
+- **Net worth has no history before it starts**: SeAT only stores assets as
+  they are right now, so the month-on-month change column stays blank until
+  two months of snapshots have accumulated. Nothing can backfill it.
+- **Asset values are estimates**: priced from ESI's `average_price`, so they
+  won't match a market tool exactly. Blueprint copies are excluded entirely -
+  they price as originals, which on the dev data inflated the total by 4.5x.
+  Assets in structures SeAT can't resolve are grouped as "unknown" and left
+  out of the home presence calculation rather than counted as away.
 - **Heartbeat can't backfill history**: ESI's online endpoint (and SeAT's
   `character_onlines` sync of it) only ever holds each character's MOST
   RECENT known login/logout, not a history. A day is only ever recorded as
