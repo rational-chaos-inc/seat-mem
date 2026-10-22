@@ -52,16 +52,26 @@ class DirectorController
     }
 
     /**
-     * The assets behind an account's "unknown location" slice. Loaded on
-     * demand rather than embedded in every page - it's small here but
-     * scales with the number of registered characters.
+     * The assets behind one of an account's non-region slices. Loaded on
+     * demand rather than embedded in every page - small here but it scales
+     * with the number of registered characters.
      */
-    public function unresolvedAssets(Request $request, int $characterId)
+    public function bucketAssets(Request $request, int $characterId, string $bucket)
     {
         $user = Auth::user();
 
         if (!$user->can('member-engagement.view_all_activities')) {
             abort(403, 'Unauthorized');
+        }
+
+        $allowed = [
+            NetWorthService::UNKNOWN_REGION,
+            NetWorthService::CUSTOMS_OFFICE,
+            NetWorthService::ASSET_SAFETY,
+        ];
+
+        if (!in_array($bucket, $allowed, true)) {
+            abort(404, 'Unknown asset bucket');
         }
 
         $group = $this->consolidation->allAccountGroups()[$characterId] ?? null;
@@ -71,7 +81,7 @@ class DirectorController
         }
 
         return response()->json([
-            'locations' => $this->netWorthService->unresolvedAssets($group),
+            'locations' => $this->netWorthService->bucketAssets($group, $bucket),
         ]);
     }
 }

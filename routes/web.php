@@ -15,9 +15,10 @@ Route::middleware(['web', 'auth', 'verified'])
         Route::get('/director', [DirectorController::class, 'index'])
             ->name('director.index');
 
-        Route::get('/director/unresolved-assets/{characterId}', [DirectorController::class, 'unresolvedAssets'])
+        Route::get('/director/bucket-assets/{characterId}/{bucket}', [DirectorController::class, 'bucketAssets'])
             ->whereNumber('characterId')
-            ->name('director.unresolved-assets');
+            ->where('bucket', '[a-z_]+')
+            ->name('director.bucket-assets');
 
         Route::get('/settings', [SettingsController::class, 'index'])
             ->name('settings');

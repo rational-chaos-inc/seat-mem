@@ -25,6 +25,22 @@ class NetWorthService
     /** Assets whose location can't be resolved are grouped under this key. */
     public const UNKNOWN_REGION = 'unknown';
 
+    /** Pulled out of their region: in limbo after a structure died. */
+    public const ASSET_SAFETY = 'asset_safety';
+
+    /**
+     * An unresolvable location holding nothing but planetary commodities
+     * is, in practice, a customs office - they sit at a planet rather than
+     * a station or structure, so they never resolve.
+     */
+    public const CUSTOMS_OFFICE = 'customs_office';
+
+    /** invTypes.typeID of the Asset Safety Wrap container. */
+    private const ASSET_SAFETY_WRAP_TYPE_ID = 60;
+
+    /** invCategories.categoryID for Planetary Commodities. */
+    private const PI_CATEGORY_ID = 43;
+
     /** Guards against a cycle in the containment tree. */
     private const MAX_NESTING_DEPTH = 20;
 
@@ -51,6 +67,8 @@ class NetWorthService
     private const SLICE_COLOURS = ['#2a78d6', '#eb6834', '#1baf7a'];
     private const OTHER_COLOUR = '#8a8a85';
     private const UNKNOWN_COLOUR = '#c9c8c0';
+    private const ASSET_SAFETY_COLOUR = '#e34948';
+    private const CUSTOMS_OFFICE_COLOUR = '#4a3aa7';
 
     public function __construct(
         private AccountConsolidationService $consolidation,
@@ -195,9 +213,14 @@ class NetWorthService
                 }
             }
 
-            // Unresolvable assets are left out of the denominator rather
+            // Assets we can't place are left out of the denominator rather
             // than counted as "away" - they're not evidence of anything.
-            $placed = array_sum(array_diff_key($regions, [self::UNKNOWN_REGION => 0]));
+            // Asset safety stays in: we know exactly where it is, and it
+            // isn't usable at home, so it should count against presence.
+            $placed = array_sum(array_diff_key($regions, [
+                self::UNKNOWN_REGION => 0,
+                self::CUSTOMS_OFFICE => 0,
+            ]));
             $atHome = array_sum(array_intersect_key($regions, array_flip($homeRegions)));
             $homePresence = $placed > 0 ? ($atHome / $placed) * 100 : null;
 
@@ -254,12 +277,18 @@ class NetWorthService
             ? collect()
             : DB::table('regions')->whereIn('region_id', $regionIds)->pluck('name', 'region_id');
 
+        $specials = [
+            self::ASSET_SAFETY => ['label' => 'Asset Safety', 'colour' => self::ASSET_SAFETY_COLOUR],
+            self::CUSTOMS_OFFICE => ['label' => 'Customs Offices', 'colour' => self::CUSTOMS_OFFICE_COLOUR],
+            self::UNKNOWN_REGION => ['label' => 'Unknown location', 'colour' => self::UNKNOWN_COLOUR],
+        ];
+
         foreach ($accounts as $account) {
             $unresolved = (float) ($account->regions[self::UNKNOWN_REGION] ?? 0);
-            $total = $account->value_placed + $unresolved;
+            $total = array_sum($account->regions);
 
             $breakdown = collect($account->regions)
-                ->except([self::UNKNOWN_REGION])
+                ->except(array_keys($specials))
                 ->map(fn($value, $regionId) => [
                     'region_id' => $regionId,
                     'name' => $names[$regionId] ?? "Region {$regionId}",
@@ -286,22 +315,27 @@ class NetWorthService
                 ];
             }
 
-            // Shown last, and in its own neutral rather than a categorical
-            // hue - it isn't a place, it's the bit we couldn't place. The
-            // home presence figure still ignores it, which is why the chart
-            // caption spells the difference out.
-            if ($unresolved > 0) {
+            // Shown last and in their own neutrals rather than categorical
+            // hues - none of them is an ordinary region.
+            foreach ($specials as $key => $special) {
+                $value = (float) ($account->regions[$key] ?? 0);
+                if ($value <= 0) {
+                    continue;
+                }
+
                 $slices[] = [
-                    'region_id' => self::UNKNOWN_REGION,
-                    'name' => 'Unknown location',
-                    'value' => $unresolved,
-                    'percent' => $total > 0 ? ($unresolved / $total) * 100 : 0,
-                    'colour' => self::UNKNOWN_COLOUR,
+                    'region_id' => $key,
+                    'name' => $special['label'],
+                    'value' => $value,
+                    'percent' => $total > 0 ? ($value / $total) * 100 : 0,
+                    'colour' => $special['colour'],
                 ];
             }
 
             $account->chart_slices = $slices;
             $account->unresolved_value = $unresolved;
+            $account->customs_office_value = (float) ($account->regions[self::CUSTOMS_OFFICE] ?? 0);
+            $account->asset_safety_value = (float) ($account->regions[self::ASSET_SAFETY] ?? 0);
         }
     }
 
@@ -451,7 +485,7 @@ class NetWorthService
      * @param  int[]  $characterIds
      * @return array<int, array{location_id: string, total_value: float, items: array}>
      */
-    public function unresolvedAssets(array $characterIds): array
+    public function bucketAssets(array $characterIds, string $bucket): array
     {
         if (empty($characterIds)) {
             return [];
@@ -461,12 +495,14 @@ class NetWorthService
         $maxDepth = self::MAX_NESTING_DEPTH;
         $priceExpression = $this->priceExpression();
         $plexTypes = $this->plexTypeList();
+        $wrapType = self::ASSET_SAFETY_WRAP_TYPE_ID;
 
         $sql = <<<SQL
             WITH RECURSIVE roots AS (
                 SELECT a.item_id, a.character_id, a.type_id, a.quantity,
-                       a.is_blueprint_copy, a.location_id, a.location_flag,
-                       a.location_id AS root_location, 0 AS depth
+                       a.is_blueprint_copy, a.location_id, a.location_id AS root_location, 0 AS depth,
+                       CASE WHEN a.type_id = {$wrapType} OR a.location_flag = 'AssetSafety'
+                            THEN 1 ELSE 0 END AS in_asset_safety
                 FROM character_assets a
                 WHERE a.character_id IN ({$ids})
                   AND a.type_id NOT IN ({$plexTypes})
@@ -475,15 +511,20 @@ class NetWorthService
                   )
                 UNION ALL
                 SELECT a.item_id, a.character_id, a.type_id, a.quantity,
-                       a.is_blueprint_copy, a.location_id, a.location_flag,
-                       r.root_location, r.depth + 1
+                       a.is_blueprint_copy, a.location_id, r.root_location, r.depth + 1,
+                       GREATEST(r.in_asset_safety,
+                                CASE WHEN a.type_id = {$wrapType} OR a.location_flag = 'AssetSafety'
+                                     THEN 1 ELSE 0 END)
                 FROM character_assets a
                 JOIN roots r ON a.location_id = r.item_id
                 WHERE r.depth < {$maxDepth}
                   AND a.type_id NOT IN ({$plexTypes})
             )
-            SELECT r.item_id, r.location_id, r.root_location, r.quantity,
+            SELECT r.item_id, r.location_id, r.root_location, r.quantity, r.type_id,
+                   r.in_asset_safety,
+                   COALESCE(md_direct.regionID, md_struct.regionID) AS region_id,
                    COALESCE(it.typeName, CONCAT('Type ', r.type_id)) AS type_name,
+                   ic.categoryID AS category_id,
                    {$priceExpression} AS value
             FROM roots r
             LEFT JOIN universe_structures us ON us.structure_id = r.root_location
@@ -493,21 +534,43 @@ class NetWorthService
             LEFT JOIN invTypes it ON it.typeID = r.type_id
             LEFT JOIN invGroups ig ON ig.groupID = it.groupID
             LEFT JOIN invCategories ic ON ic.categoryID = ig.categoryID
-            WHERE COALESCE(md_direct.regionID, md_struct.regionID) IS NULL
             ORDER BY type_name
         SQL;
 
         $rows = collect(DB::select($sql));
 
-        if ($rows->isEmpty()) {
+        if ($bucket === self::ASSET_SAFETY) {
+            $wanted = $rows->filter(fn($row) => (int) $row->in_asset_safety === 1);
+        } else {
+            // Customs offices are the unplaceable locations holding nothing
+            // but planetary commodities; the rest are simply unknown.
+            $unplaceable = $rows->filter(fn($row) => $row->region_id === null && (int) $row->in_asset_safety === 0);
+            $piOnly = $unplaceable->groupBy('root_location')
+                ->filter(fn($group) => $group->every(fn($row) => (int) $row->category_id === self::PI_CATEGORY_ID))
+                ->keys()
+                ->map(fn($key) => (string) $key)
+                ->all();
+
+            $wanted = $unplaceable->filter(function ($row) use ($bucket, $piOnly) {
+                $isCustoms = in_array((string) $row->root_location, $piOnly, true);
+
+                return $bucket === self::CUSTOMS_OFFICE ? $isCustoms : !$isCustoms;
+            });
+        }
+
+        if ($wanted->isEmpty()) {
             return [];
         }
 
+        // Nest against every row, not just the wanted ones, so a ship in
+        // asset safety still shows the modules inside it.
         $childrenByParent = $rows->groupBy(fn($row) => (string) $row->location_id);
+        $wantedIds = $wanted->pluck('item_id')->map(fn($id) => (string) $id)->flip();
 
         $build = function (string $parentId) use (&$build, $childrenByParent): array {
             return ($childrenByParent[$parentId] ?? collect())
                 ->map(fn($row) => [
+                    'type_id' => (int) $row->type_id,
                     'name' => $row->type_name,
                     'quantity' => (int) $row->quantity,
                     'value' => (float) $row->value,
@@ -517,15 +580,31 @@ class NetWorthService
                 ->all();
         };
 
-        return $rows->groupBy(fn($row) => (string) $row->root_location)
+        // Only the topmost wanted rows start a tree; the rest hang off them.
+        $tops = $wanted->filter(fn($row) => !$wantedIds->has((string) $row->location_id));
+
+        return $tops->groupBy(fn($row) => (string) $row->root_location)
             ->map(fn($group, $location) => [
                 'location_id' => (string) $location,
-                'total_value' => (float) $group->sum('value'),
-                'items' => $build((string) $location),
+                'total_value' => (float) $group->sum(fn($row) => $row->value + $this->descendantValue($childrenByParent, (string) $row->item_id)),
+                'items' => $group->map(fn($row) => [
+                    'type_id' => (int) $row->type_id,
+                    'name' => $row->type_name,
+                    'quantity' => (int) $row->quantity,
+                    'value' => (float) $row->value,
+                    'children' => $build((string) $row->item_id),
+                ])->values()->all(),
             ])
             ->sortByDesc('total_value')
             ->values()
             ->all();
+    }
+
+    /** Value of everything nested below an item, at any depth. */
+    private function descendantValue($childrenByParent, string $itemId): float
+    {
+        return ($childrenByParent[$itemId] ?? collect())
+            ->sum(fn($row) => (float) $row->value + $this->descendantValue($childrenByParent, (string) $row->item_id));
     }
 
     /**
@@ -554,15 +633,69 @@ class NetWorthService
             return [];
         }
 
+        $rows = $this->assetBuckets($characterIds);
+
+        // An unresolvable location counts as a customs office only if
+        // everything in it is planetary commodities - a structure SeAT
+        // can't see would hold a mixture.
+        $unplaceable = [];
+        foreach ($rows as $row) {
+            if ($row->region_id !== null || $row->in_asset_safety) {
+                continue;
+            }
+
+            $key = $row->character_id . '|' . $row->root_location;
+            $unplaceable[$key]['pi'] = ($unplaceable[$key]['pi'] ?? 0) + (float) $row->pi_value;
+            $unplaceable[$key]['other'] = ($unplaceable[$key]['other'] ?? 0) + (float) $row->other_value;
+        }
+
+        $byCharacter = [];
+        foreach ($rows as $row) {
+            $value = (float) $row->pi_value + (float) $row->other_value;
+            if ($value <= 0) {
+                continue;
+            }
+
+            if ($row->in_asset_safety) {
+                $bucket = self::ASSET_SAFETY;
+            } elseif ($row->region_id !== null) {
+                $bucket = (string) $row->region_id;
+            } else {
+                $totals = $unplaceable[$row->character_id . '|' . $row->root_location] ?? ['pi' => 0, 'other' => 0];
+                $bucket = ($totals['other'] <= 0 && $totals['pi'] > 0)
+                    ? self::CUSTOMS_OFFICE
+                    : self::UNKNOWN_REGION;
+            }
+
+            $characterId = (int) $row->character_id;
+            $byCharacter[$characterId][$bucket] = ($byCharacter[$characterId][$bucket] ?? 0) + $value;
+        }
+
+        return $byCharacter;
+    }
+
+    /**
+     * Every asset resolved to where it sits, split by whether it is
+     * planetary commodities, so the caller can tell a customs office from
+     * a structure SeAT simply can't see.
+     *
+     * @param  int[]  $characterIds
+     */
+    private function assetBuckets(array $characterIds): array
+    {
         $ids = implode(',', array_map('intval', $characterIds));
         $maxDepth = self::MAX_NESTING_DEPTH;
         $priceExpression = $this->priceExpression();
         $plexTypes = $this->plexTypeList();
+        $wrapType = self::ASSET_SAFETY_WRAP_TYPE_ID;
+        $piCategory = self::PI_CATEGORY_ID;
 
         $sql = <<<SQL
             WITH RECURSIVE roots AS (
                 SELECT a.item_id, a.character_id, a.type_id, a.quantity,
-                       a.is_blueprint_copy, a.location_id AS root_location, 0 AS depth
+                       a.is_blueprint_copy, a.location_id AS root_location, 0 AS depth,
+                       CASE WHEN a.type_id = {$wrapType} OR a.location_flag = 'AssetSafety'
+                            THEN 1 ELSE 0 END AS in_asset_safety
                 FROM character_assets a
                 WHERE a.character_id IN ({$ids})
                   AND a.type_id NOT IN ({$plexTypes})
@@ -571,17 +704,21 @@ class NetWorthService
                   )
                 UNION ALL
                 SELECT a.item_id, a.character_id, a.type_id, a.quantity,
-                       a.is_blueprint_copy, r.root_location, r.depth + 1
+                       a.is_blueprint_copy, r.root_location, r.depth + 1,
+                       GREATEST(r.in_asset_safety,
+                                CASE WHEN a.type_id = {$wrapType} OR a.location_flag = 'AssetSafety'
+                                     THEN 1 ELSE 0 END)
                 FROM character_assets a
                 JOIN roots r ON a.location_id = r.item_id
                 WHERE r.depth < {$maxDepth}
                   AND a.type_id NOT IN ({$plexTypes})
             )
             SELECT r.character_id,
+                   r.root_location,
+                   r.in_asset_safety,
                    COALESCE(md_direct.regionID, md_struct.regionID) AS region_id,
-                   SUM(
-                       {$priceExpression}
-                   ) AS value
+                   SUM(CASE WHEN ic.categoryID = {$piCategory} THEN {$priceExpression} ELSE 0 END) AS pi_value,
+                   SUM(CASE WHEN ic.categoryID = {$piCategory} THEN 0 ELSE {$priceExpression} END) AS other_value
             FROM roots r
             LEFT JOIN universe_structures us ON us.structure_id = r.root_location
             LEFT JOIN mapDenormalize md_direct ON md_direct.itemID = r.root_location
@@ -590,20 +727,9 @@ class NetWorthService
             LEFT JOIN invTypes it ON it.typeID = r.type_id
             LEFT JOIN invGroups ig ON ig.groupID = it.groupID
             LEFT JOIN invCategories ic ON ic.categoryID = ig.categoryID
-            GROUP BY r.character_id, region_id
+            GROUP BY r.character_id, r.root_location, r.in_asset_safety, region_id
         SQL;
 
-        $byCharacter = [];
-        foreach (DB::select($sql) as $row) {
-            $value = (float) $row->value;
-            if ($value <= 0) {
-                continue;
-            }
-
-            $regionKey = $row->region_id === null ? self::UNKNOWN_REGION : (string) $row->region_id;
-            $byCharacter[(int) $row->character_id][$regionKey] = $value;
-        }
-
-        return $byCharacter;
+        return DB::select($sql);
     }
 }

@@ -241,7 +241,8 @@
                                             data-unresolved="{{ (int) $row->unresolved_value }}"
                                             data-home="{{ number_format($row->home_presence, 1) }}"
                                             data-character="{{ $row->character_id }}"
-                                            data-slices="{{ json_encode($row->chart_slices) }}">
+                                            data-slices="{{ json_encode($row->chart_slices) }}"
+                                            data-other-regions="{{ json_encode(array_slice($row->region_breakdown, 3)) }}">
                                             <td>{{ $loop->iteration }}</td>
                                             <td>
                                                 {{ $row->display_name }}
@@ -340,11 +341,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                <p class="small text-muted">
-                    SeAT couldn't resolve these containers to a station, structure or system -
-                    usually because it has no docking access to the structure holding them.
-                    They're excluded from the home presence calculation.
-                </p>
+                <p class="small text-muted" id="me-unknown-intro"></p>
                 <div id="me-unknown-body"></div>
             </div>
         </div>
@@ -363,27 +360,81 @@
         // Chart.js 2.9 is already loaded by SeAT's layout.
         var chart = null;
         var selected = null;
-        var unknownUrl = @json(route('member-engagement.director.unresolved-assets', ['characterId' => 0]));
+        var bucketUrl = @json(route('member-engagement.director.bucket-assets', ['characterId' => 0, 'bucket' => 'BUCKET']));
+        var drillable = ['unknown', 'customs_office', 'asset_safety', 'other'];
 
         function escapeHtml(text) {
             return $('<div>').text(text).html();
         }
 
-        function hasUnknown(slices) {
-            return slices.some(function (slice) { return slice.region_id === 'unknown'; });
+        function icon(typeId) {
+            return '<img src="https://images.evetech.net/types/' + typeId + '/icon?size=32" '
+                + 'width="24" height="24" class="mr-1 align-text-bottom" alt="" loading="lazy">';
         }
 
-        function openUnknown() {
-            if (!selected || !hasUnknown(selected.slices)) {
+        function renderItems(items) {
+            if (!items || !items.length) {
+                return '';
+            }
+
+            return '<ul class="list-unstyled ml-3 mb-2">' + items.map(function (item) {
+                return '<li>'
+                    + icon(item.type_id)
+                    + escapeHtml(item.name)
+                    + (item.quantity > 1 ? ' &times;' + item.quantity.toLocaleString() : '')
+                    + (item.value > 0
+                        ? ' <span class="text-muted small">(' + Math.round(item.value).toLocaleString() + ' ISK)</span>'
+                        : '')
+                    + renderItems(item.children)
+                    + '</li>';
+            }).join('') + '</ul>';
+        }
+
+        // "Other" is already on the page - no round trip needed for it.
+        function openOtherRegions() {
+            var regions = selected.otherRegions || [];
+            $('#me-unknown-modal-title').text('Other regions - ' + selected.member);
+            $('#me-unknown-intro').text('The regions folded into the "Other" slice, largest first.');
+            $('#me-unknown-body').html(
+                regions.length
+                    ? '<table class="table table-sm table-striped mb-0"><tbody>' + regions.map(function (region) {
+                        return '<tr><td>' + escapeHtml(region.name) + '</td>'
+                            + '<td class="text-right">' + region.percent.toFixed(2) + '%</td>'
+                            + '<td class="text-right">' + Math.round(region.value).toLocaleString() + ' ISK</td></tr>';
+                      }).join('') + '</tbody></table>'
+                    : '<p class="text-muted mb-0">Nothing to show.</p>'
+            );
+            $('#me-unknown-modal').modal('show');
+        }
+
+        var bucketIntro = {
+            unknown: 'SeAT could not resolve these containers to a station, structure or system - '
+                + 'usually because it has no docking access. They are left out of home presence.',
+            customs_office: 'Unplaceable locations holding nothing but planetary commodities, which in '
+                + 'practice means a customs office. They are left out of home presence.',
+            asset_safety: 'Assets in asset safety after a structure was lost. They count towards home '
+                + 'presence as being away, since they are not usable where they sit.'
+        };
+
+        function openBucket(bucket) {
+            if (!selected) {
+                return;
+            }
+
+            if (bucket === 'other') {
+                openOtherRegions();
                 return;
             }
 
             var body = $('#me-unknown-body');
             body.html('<p class="text-muted mb-0">Loading...</p>');
-            $('#me-unknown-modal-title').text('Unknown locations - ' + selected.member);
+            $('#me-unknown-modal-title').text(
+                $.trim($('#me-region-legend tr[data-bucket="' + bucket + '"] td:eq(1)').text()) + ' - ' + selected.member
+            );
+            $('#me-unknown-intro').text(bucketIntro[bucket] || '');
             $('#me-unknown-modal').modal('show');
 
-            $.getJSON(unknownUrl.replace(/0$/, selected.characterId))
+            $.getJSON(bucketUrl.replace('BUCKET', bucket).replace('/0/', '/' + selected.characterId + '/'))
                 .done(function (data) {
                     if (!data.locations || !data.locations.length) {
                         body.html('<p class="text-muted mb-0">Nothing to show.</p>');
@@ -401,25 +452,11 @@
                 });
         }
 
-        function renderItems(items) {
-            if (!items || !items.length) {
-                return '';
-            }
-
-            return '<ul class="list-unstyled ml-3 mb-2">' + items.map(function (item) {
-                return '<li>'
-                    + escapeHtml(item.name)
-                    + (item.quantity > 1 ? ' &times;' + item.quantity.toLocaleString() : '')
-                    + (item.value > 0
-                        ? ' <span class="text-muted small">(' + Math.round(item.value).toLocaleString() + ' ISK)</span>'
-                        : '')
-                    + renderItems(item.children)
-                    + '</li>';
-            }).join('') + '</ul>';
-        }
-
-        function render(member, slices, unresolved, home, characterId) {
-            selected = { member: member, slices: slices, characterId: characterId };
+        function render(member, slices, unresolved, home, characterId, otherRegions) {
+            selected = {
+                member: member, slices: slices,
+                characterId: characterId, otherRegions: otherRegions || []
+            };
             $('#me-region-title').text('Assets by region - ' + member);
 
             // These slices are of everything held. Home presence ignores
@@ -434,12 +471,15 @@
             );
 
             $('#me-region-legend').html(slices.map(function (slice) {
-                var isUnknown = slice.region_id === 'unknown';
-                return '<tr' + (isUnknown ? ' class="me-unknown-link" style="cursor:pointer;"' : '') + '>'
+                var bucket = slice.region_id === 'other' ? 'other' : slice.region_id;
+                var canDrill = drillable.indexOf(String(bucket)) !== -1;
+
+                return '<tr data-bucket="' + bucket + '"'
+                    + (canDrill ? ' class="me-drill" style="cursor:pointer;"' : '') + '>'
                     + '<td style="width:1.5rem;"><span style="display:inline-block;width:.75rem;height:.75rem;'
                     + 'border-radius:2px;background:' + slice.colour + ';"></span></td>'
                     + '<td>' + escapeHtml(slice.name)
-                    + (isUnknown ? ' <span class="badge badge-light">view</span>' : '') + '</td>'
+                    + (canDrill ? ' <span class="badge badge-light">view</span>' : '') + '</td>'
                     + '<td class="text-right">' + slice.percent.toFixed(1) + '%</td>'
                     + '</tr>';
             }).join(''));
@@ -463,8 +503,12 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     onClick: function (event, elements) {
-                        if (elements.length && slices[elements[0]._index].region_id === 'unknown') {
-                            openUnknown();
+                        if (!elements.length) {
+                            return;
+                        }
+                        var bucket = String(slices[elements[0]._index].region_id);
+                        if (drillable.indexOf(bucket) !== -1) {
+                            openBucket(bucket);
                         }
                     },
                     // Identity comes from the table legend beside the chart,
@@ -495,11 +539,14 @@
             row.addClass('table-active');
             render(
                 row.data('member'), row.data('slices'),
-                row.data('unresolved'), row.data('home'), row.data('character')
+                row.data('unresolved'), row.data('home'),
+                row.data('character'), row.data('otherRegions')
             );
         });
 
-        $('#me-region-legend').on('click', 'tr.me-unknown-link', openUnknown);
+        $('#me-region-legend').on('click', 'tr.me-drill', function () {
+            openBucket(String($(this).data('bucket')));
+        });
 
         // Open on the least-present account - the one worth looking at.
         rows.first().trigger('click');
