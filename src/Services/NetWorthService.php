@@ -28,6 +28,9 @@ class NetWorthService
     /** Guards against a cycle in the containment tree. */
     private const MAX_NESTING_DEPTH = 20;
 
+    /** invCategories.categoryID for ships. */
+    private const SHIP_CATEGORY_ID = 6;
+
     public function __construct(
         private AccountConsolidationService $consolidation,
         private EntityResolutionService $entityResolution,
@@ -290,6 +293,15 @@ class NetWorthService
      * originals, which would wildly inflate the total) but stay in the
      * tree so anything inside them still resolves.
      *
+     * Pricing falls back to the SDE's basePrice when an item has no market
+     * price at all - supercarriers and the like can't be traded in Jita, so
+     * they'd otherwise count as worthless. Ships additionally take the
+     * HIGHER of market and basePrice, since thin markets understate
+     * capitals. That floor is deliberately not applied everywhere:
+     * basePrice is meaningless for manufactured goods (Scourge Rage
+     * Torpedoes price at 1,502 ISK on the market against a basePrice of
+     * 1,500,245), so a blanket GREATEST() would invent trillions.
+     *
      * @param  int[]  $characterIds
      * @return array<int, array<string, float>> character_id => [region_id => value]
      */
@@ -301,6 +313,7 @@ class NetWorthService
 
         $ids = implode(',', array_map('intval', $characterIds));
         $maxDepth = self::MAX_NESTING_DEPTH;
+        $shipCategory = self::SHIP_CATEGORY_ID;
 
         $sql = <<<SQL
             WITH RECURSIVE roots AS (
@@ -322,7 +335,13 @@ class NetWorthService
                    COALESCE(md_direct.regionID, md_struct.regionID) AS region_id,
                    SUM(
                        CASE WHEN r.is_blueprint_copy = 1 THEN 0
-                            ELSE r.quantity * COALESCE(mp.average_price, 0)
+                            ELSE r.quantity * CASE
+                                WHEN ic.categoryID = {$shipCategory}
+                                    THEN GREATEST(COALESCE(mp.average_price, 0), COALESCE(it.basePrice, 0))
+                                WHEN COALESCE(mp.average_price, 0) > 0
+                                    THEN mp.average_price
+                                ELSE COALESCE(it.basePrice, 0)
+                            END
                        END
                    ) AS value
             FROM roots r
@@ -330,6 +349,9 @@ class NetWorthService
             LEFT JOIN mapDenormalize md_direct ON md_direct.itemID = r.root_location
             LEFT JOIN mapDenormalize md_struct ON md_struct.itemID = us.solar_system_id
             LEFT JOIN market_prices mp ON mp.type_id = r.type_id
+            LEFT JOIN invTypes it ON it.typeID = r.type_id
+            LEFT JOIN invGroups ig ON ig.groupID = it.groupID
+            LEFT JOIN invCategories ic ON ic.categoryID = ig.categoryID
             GROUP BY r.character_id, region_id
         SQL;
 
