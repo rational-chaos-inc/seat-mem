@@ -234,6 +234,7 @@
                                         <tr class="me-region-row @if($row->below_threshold) table-danger @endif"
                                             style="cursor: pointer;"
                                             data-member="{{ $row->display_name }}"
+                                            data-unresolved="{{ (int) $row->unresolved_value }}"
                                             data-slices="{{ json_encode($row->chart_slices) }}">
                                             <td>{{ $loop->iteration }}</td>
                                             <td>
@@ -263,6 +264,7 @@
                                 <canvas id="me-region-chart"></canvas>
                             </div>
                             <table class="table table-sm mt-2 mb-0" id="me-region-legend"></table>
+                            <p class="small text-muted mb-0" id="me-region-note"></p>
                         </div>
                     </div>
                 @endif
@@ -338,8 +340,18 @@
             return $('<div>').text(text).html();
         }
 
-        function render(member, slices) {
+        function render(member, slices, unresolved) {
             $('#me-region-title').text('Assets by region - ' + member);
+
+            // Shown as a caption rather than a slice: unresolved assets are
+            // excluded from these percentages, exactly as they are from the
+            // home presence figure in the table.
+            $('#me-region-note').text(
+                unresolved > 0
+                    ? 'Excludes ' + Math.round(unresolved).toLocaleString()
+                        + ' ISK in locations SeAT could not resolve.'
+                    : ''
+            );
 
             $('#me-region-legend').html(slices.map(function (slice) {
                 return '<tr>'
@@ -394,7 +406,7 @@
             var row = $(this);
             rows.removeClass('table-active');
             row.addClass('table-active');
-            render(row.data('member'), row.data('slices'));
+            render(row.data('member'), row.data('slices'), row.data('unresolved'));
         });
 
         // Open on the least-present account - the one worth looking at.

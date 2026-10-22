@@ -238,16 +238,19 @@ class NetWorthService
             : DB::table('regions')->whereIn('region_id', $regionIds)->pluck('name', 'region_id');
 
         foreach ($accounts as $account) {
-            $total = array_sum($account->regions);
+            // Measured against placed value, the same denominator home
+            // presence uses - otherwise an account with a big unresolved
+            // chunk shows a home region at (say) 70% in the chart next to
+            // 93% in the table, which just reads as a bug.
+            $placed = $account->value_placed;
 
             $breakdown = collect($account->regions)
+                ->except([self::UNKNOWN_REGION])
                 ->map(fn($value, $regionId) => [
                     'region_id' => $regionId,
-                    'name' => $regionId === self::UNKNOWN_REGION
-                        ? 'Unresolved location'
-                        : ($names[$regionId] ?? "Region {$regionId}"),
+                    'name' => $names[$regionId] ?? "Region {$regionId}",
                     'value' => (float) $value,
-                    'percent' => $total > 0 ? ((float) $value / $total) * 100 : 0,
+                    'percent' => $placed > 0 ? ((float) $value / $placed) * 100 : 0,
                 ])
                 ->sortByDesc('value')
                 ->values();
@@ -270,6 +273,7 @@ class NetWorthService
             }
 
             $account->chart_slices = $slices;
+            $account->unresolved_value = (float) ($account->regions[self::UNKNOWN_REGION] ?? 0);
         }
     }
 
