@@ -28,6 +28,13 @@ class NetWorthService
     /** Guards against a cycle in the containment tree. */
     private const MAX_NESTING_DEPTH = 20;
 
+    /**
+     * invGroups.groupID for PLEX. It sits in the account-wide vault, which
+     * has no station/structure/region, so it is counted as currency
+     * alongside the wallet rather than as an asset in an unknown place.
+     */
+    private const PLEX_GROUP_ID = 1875;
+
     /** invCategories.categoryID for ships. */
     private const SHIP_CATEGORY_ID = 6;
 
@@ -69,6 +76,7 @@ class NetWorthService
         }
 
         $assetsByCharacter = $this->assetValuesByRegion($characterIds->all());
+        $plexByCharacter = $this->plexValues($characterIds->all());
 
         $wallets = DB::table('character_wallet_balances')
             ->whereIn('character_id', $characterIds)
@@ -91,6 +99,7 @@ class NetWorthService
                     'corporation_id' => $corporations[$characterId] ?? null,
                     'asset_value' => array_sum($regions),
                     'wallet_balance' => (float) ($wallets[$characterId] ?? 0),
+                    'plex_value' => (float) ($plexByCharacter[$characterId] ?? 0),
                     'regions' => $regions,
                 ]
             );
@@ -129,6 +138,7 @@ class NetWorthService
                     'corporation_id' => $row->corporation_id,
                     'asset_value' => $row->asset_value,
                     'wallet_balance' => $row->wallet_balance,
+                    'plex_value' => $row->plex_value,
                     'regions' => $row->regions,
                 ]
             );
@@ -167,6 +177,7 @@ class NetWorthService
         $accounts = collect($groups)->map(function ($characterIds, $mainId) use ($byCharacter, $previous, $homeRegions, $threshold) {
             $assetValue = 0.0;
             $walletBalance = 0.0;
+            $plexValue = 0.0;
             $regions = [];
 
             foreach ($characterIds as $characterId) {
@@ -177,6 +188,7 @@ class NetWorthService
 
                 $assetValue += (float) $row->asset_value;
                 $walletBalance += (float) $row->wallet_balance;
+                $plexValue += (float) $row->plex_value;
 
                 foreach (($row->regions ?? []) as $regionId => $value) {
                     $regions[$regionId] = ($regions[$regionId] ?? 0) + (float) $value;
@@ -189,7 +201,7 @@ class NetWorthService
             $atHome = array_sum(array_intersect_key($regions, array_flip($homeRegions)));
             $homePresence = $placed > 0 ? ($atHome / $placed) * 100 : null;
 
-            $netWorth = $assetValue + $walletBalance;
+            $netWorth = $assetValue + $walletBalance + $plexValue;
             $previousNetWorth = $previous[$mainId] ?? null;
             $changePercent = ($previousNetWorth !== null && $previousNetWorth > 0)
                 ? (($netWorth - $previousNetWorth) / $previousNetWorth) * 100
@@ -202,6 +214,8 @@ class NetWorthService
                 'member_count' => count($characterIds),
                 'asset_value' => $assetValue,
                 'wallet_balance' => $walletBalance,
+                'plex_value' => $plexValue,
+                'currency_value' => $walletBalance + $plexValue,
                 'net_worth' => $netWorth,
                 'regions' => $regions,
                 'value_at_home' => $atHome,
@@ -362,10 +376,52 @@ class NetWorthService
                 continue;
             }
 
-            $totals[$mainId] = ($totals[$mainId] ?? 0) + (float) $row->asset_value + (float) $row->wallet_balance;
+            $totals[$mainId] = ($totals[$mainId] ?? 0)
+                + (float) $row->asset_value
+                + (float) $row->wallet_balance
+                + (float) $row->plex_value;
         }
 
         return $totals;
+    }
+
+    /**
+     * PLEX type IDs as a SQL list, for excluding them from the asset tree.
+     * Falls back to a value that matches nothing if the SDE has no PLEX
+     * group, so the NOT IN stays valid SQL.
+     */
+    private function plexTypeList(): string
+    {
+        $types = DB::table('invTypes')
+            ->where('groupID', self::PLEX_GROUP_ID)
+            ->pluck('typeID')
+            ->map(fn($id) => (int) $id);
+
+        return $types->isEmpty() ? '0' : $types->implode(',');
+    }
+
+    /**
+     * PLEX held per character, valued at market.
+     *
+     * @param  int[]  $characterIds
+     * @return array<int, float>
+     */
+    private function plexValues(array $characterIds): array
+    {
+        if (empty($characterIds)) {
+            return [];
+        }
+
+        return DB::table('character_assets')
+            ->join('invTypes', 'invTypes.typeID', '=', 'character_assets.type_id')
+            ->leftJoin('market_prices', 'market_prices.type_id', '=', 'character_assets.type_id')
+            ->whereIn('character_assets.character_id', $characterIds)
+            ->where('invTypes.groupID', self::PLEX_GROUP_ID)
+            ->groupBy('character_assets.character_id')
+            ->selectRaw('character_assets.character_id, SUM(character_assets.quantity * COALESCE(market_prices.average_price, 0)) AS value')
+            ->pluck('value', 'character_id')
+            ->map(fn($value) => (float) $value)
+            ->all();
     }
 
     /**
@@ -404,6 +460,7 @@ class NetWorthService
         $ids = implode(',', array_map('intval', $characterIds));
         $maxDepth = self::MAX_NESTING_DEPTH;
         $priceExpression = $this->priceExpression();
+        $plexTypes = $this->plexTypeList();
 
         $sql = <<<SQL
             WITH RECURSIVE roots AS (
@@ -412,6 +469,7 @@ class NetWorthService
                        a.location_id AS root_location, 0 AS depth
                 FROM character_assets a
                 WHERE a.character_id IN ({$ids})
+                  AND a.type_id NOT IN ({$plexTypes})
                   AND NOT EXISTS (
                       SELECT 1 FROM character_assets p WHERE p.item_id = a.location_id
                   )
@@ -422,6 +480,7 @@ class NetWorthService
                 FROM character_assets a
                 JOIN roots r ON a.location_id = r.item_id
                 WHERE r.depth < {$maxDepth}
+                  AND a.type_id NOT IN ({$plexTypes})
             )
             SELECT r.item_id, r.location_id, r.root_location, r.quantity,
                    COALESCE(it.typeName, CONCAT('Type ', r.type_id)) AS type_name,
@@ -498,6 +557,7 @@ class NetWorthService
         $ids = implode(',', array_map('intval', $characterIds));
         $maxDepth = self::MAX_NESTING_DEPTH;
         $priceExpression = $this->priceExpression();
+        $plexTypes = $this->plexTypeList();
 
         $sql = <<<SQL
             WITH RECURSIVE roots AS (
@@ -505,6 +565,7 @@ class NetWorthService
                        a.is_blueprint_copy, a.location_id AS root_location, 0 AS depth
                 FROM character_assets a
                 WHERE a.character_id IN ({$ids})
+                  AND a.type_id NOT IN ({$plexTypes})
                   AND NOT EXISTS (
                       SELECT 1 FROM character_assets p WHERE p.item_id = a.location_id
                   )
@@ -514,6 +575,7 @@ class NetWorthService
                 FROM character_assets a
                 JOIN roots r ON a.location_id = r.item_id
                 WHERE r.depth < {$maxDepth}
+                  AND a.type_id NOT IN ({$plexTypes})
             )
             SELECT r.character_id,
                    COALESCE(md_direct.regionID, md_struct.regionID) AS region_id,

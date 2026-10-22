@@ -14,6 +14,7 @@ class NetWorthMonthly extends Model
         'corporation_id',
         'asset_value',
         'wallet_balance',
+        'plex_value',
         'regions',
     ];
 
@@ -21,6 +22,7 @@ class NetWorthMonthly extends Model
         'month' => 'date',
         'asset_value' => 'decimal:2',
         'wallet_balance' => 'decimal:2',
+        'plex_value' => 'decimal:2',
         'regions' => 'array',
     ];
 }
