@@ -369,6 +369,107 @@ class NetWorthService
     }
 
     /**
+     * How an asset is priced, as SQL. Shared so the per-region totals and
+     * the unresolved-asset listing can never drift apart.
+     */
+    private function priceExpression(string $alias = 'r'): string
+    {
+        $shipCategory = self::SHIP_CATEGORY_ID;
+
+        return "CASE WHEN {$alias}.is_blueprint_copy = 1 THEN 0
+                     ELSE {$alias}.quantity * CASE
+                         WHEN ic.categoryID = {$shipCategory}
+                             THEN GREATEST(COALESCE(mp.average_price, 0), COALESCE(it.basePrice, 0))
+                         WHEN COALESCE(mp.average_price, 0) > 0
+                             THEN mp.average_price
+                         ELSE COALESCE(it.basePrice, 0)
+                     END
+                END";
+    }
+
+    /**
+     * The individual assets behind an account's "unknown location" slice,
+     * grouped by the container SeAT couldn't place and nested the way they
+     * actually sit inside it.
+     *
+     * @param  int[]  $characterIds
+     * @return array<int, array{location_id: string, total_value: float, items: array}>
+     */
+    public function unresolvedAssets(array $characterIds): array
+    {
+        if (empty($characterIds)) {
+            return [];
+        }
+
+        $ids = implode(',', array_map('intval', $characterIds));
+        $maxDepth = self::MAX_NESTING_DEPTH;
+        $priceExpression = $this->priceExpression();
+
+        $sql = <<<SQL
+            WITH RECURSIVE roots AS (
+                SELECT a.item_id, a.character_id, a.type_id, a.quantity,
+                       a.is_blueprint_copy, a.location_id, a.location_flag,
+                       a.location_id AS root_location, 0 AS depth
+                FROM character_assets a
+                WHERE a.character_id IN ({$ids})
+                  AND NOT EXISTS (
+                      SELECT 1 FROM character_assets p WHERE p.item_id = a.location_id
+                  )
+                UNION ALL
+                SELECT a.item_id, a.character_id, a.type_id, a.quantity,
+                       a.is_blueprint_copy, a.location_id, a.location_flag,
+                       r.root_location, r.depth + 1
+                FROM character_assets a
+                JOIN roots r ON a.location_id = r.item_id
+                WHERE r.depth < {$maxDepth}
+            )
+            SELECT r.item_id, r.location_id, r.root_location, r.quantity,
+                   COALESCE(it.typeName, CONCAT('Type ', r.type_id)) AS type_name,
+                   {$priceExpression} AS value
+            FROM roots r
+            LEFT JOIN universe_structures us ON us.structure_id = r.root_location
+            LEFT JOIN mapDenormalize md_direct ON md_direct.itemID = r.root_location
+            LEFT JOIN mapDenormalize md_struct ON md_struct.itemID = us.solar_system_id
+            LEFT JOIN market_prices mp ON mp.type_id = r.type_id
+            LEFT JOIN invTypes it ON it.typeID = r.type_id
+            LEFT JOIN invGroups ig ON ig.groupID = it.groupID
+            LEFT JOIN invCategories ic ON ic.categoryID = ig.categoryID
+            WHERE COALESCE(md_direct.regionID, md_struct.regionID) IS NULL
+            ORDER BY type_name
+        SQL;
+
+        $rows = collect(DB::select($sql));
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $childrenByParent = $rows->groupBy(fn($row) => (string) $row->location_id);
+
+        $build = function (string $parentId) use (&$build, $childrenByParent): array {
+            return ($childrenByParent[$parentId] ?? collect())
+                ->map(fn($row) => [
+                    'name' => $row->type_name,
+                    'quantity' => (int) $row->quantity,
+                    'value' => (float) $row->value,
+                    'children' => $build((string) $row->item_id),
+                ])
+                ->values()
+                ->all();
+        };
+
+        return $rows->groupBy(fn($row) => (string) $row->root_location)
+            ->map(fn($group, $location) => [
+                'location_id' => (string) $location,
+                'total_value' => (float) $group->sum('value'),
+                'items' => $build((string) $location),
+            ])
+            ->sortByDesc('total_value')
+            ->values()
+            ->all();
+    }
+
+    /**
      * Walks the asset containment tree to find where each asset really
      * sits, then prices it.
      *
@@ -396,7 +497,7 @@ class NetWorthService
 
         $ids = implode(',', array_map('intval', $characterIds));
         $maxDepth = self::MAX_NESTING_DEPTH;
-        $shipCategory = self::SHIP_CATEGORY_ID;
+        $priceExpression = $this->priceExpression();
 
         $sql = <<<SQL
             WITH RECURSIVE roots AS (
@@ -417,15 +518,7 @@ class NetWorthService
             SELECT r.character_id,
                    COALESCE(md_direct.regionID, md_struct.regionID) AS region_id,
                    SUM(
-                       CASE WHEN r.is_blueprint_copy = 1 THEN 0
-                            ELSE r.quantity * CASE
-                                WHEN ic.categoryID = {$shipCategory}
-                                    THEN GREATEST(COALESCE(mp.average_price, 0), COALESCE(it.basePrice, 0))
-                                WHEN COALESCE(mp.average_price, 0) > 0
-                                    THEN mp.average_price
-                                ELSE COALESCE(it.basePrice, 0)
-                            END
-                       END
+                       {$priceExpression}
                    ) AS value
             FROM roots r
             LEFT JOIN universe_structures us ON us.structure_id = r.root_location

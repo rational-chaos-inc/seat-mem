@@ -236,6 +236,7 @@
                                             data-member="{{ $row->display_name }}"
                                             data-unresolved="{{ (int) $row->unresolved_value }}"
                                             data-home="{{ number_format($row->home_presence, 1) }}"
+                                            data-character="{{ $row->character_id }}"
                                             data-slices="{{ json_encode($row->chart_slices) }}">
                                             <td>{{ $loop->iteration }}</td>
                                             <td>
@@ -324,6 +325,27 @@
 
     </div>
 </div>
+
+<div class="modal fade" id="me-unknown-modal" tabindex="-1" role="dialog" aria-labelledby="me-unknown-modal-title">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="me-unknown-modal-title">Assets in unknown locations</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">
+                    SeAT couldn't resolve these containers to a station, structure or system -
+                    usually because it has no docking access to the structure holding them.
+                    They're excluded from the home presence calculation.
+                </p>
+                <div id="me-unknown-body"></div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('javascript')
@@ -336,12 +358,64 @@
 
         // Chart.js 2.9 is already loaded by SeAT's layout.
         var chart = null;
+        var selected = null;
+        var unknownUrl = @json(route('member-engagement.director.unresolved-assets', ['characterId' => 0]));
 
         function escapeHtml(text) {
             return $('<div>').text(text).html();
         }
 
-        function render(member, slices, unresolved, home) {
+        function hasUnknown(slices) {
+            return slices.some(function (slice) { return slice.region_id === 'unknown'; });
+        }
+
+        function openUnknown() {
+            if (!selected || !hasUnknown(selected.slices)) {
+                return;
+            }
+
+            var body = $('#me-unknown-body');
+            body.html('<p class="text-muted mb-0">Loading...</p>');
+            $('#me-unknown-modal-title').text('Unknown locations - ' + selected.member);
+            $('#me-unknown-modal').modal('show');
+
+            $.getJSON(unknownUrl.replace(/0$/, selected.characterId))
+                .done(function (data) {
+                    if (!data.locations || !data.locations.length) {
+                        body.html('<p class="text-muted mb-0">Nothing to show.</p>');
+                        return;
+                    }
+                    body.html(data.locations.map(function (location) {
+                        return '<h6 class="mb-1">Container ' + escapeHtml(location.location_id) + '</h6>'
+                            + '<div class="small text-muted mb-1">'
+                            + Math.round(location.total_value).toLocaleString() + ' ISK</div>'
+                            + renderItems(location.items);
+                    }).join(''));
+                })
+                .fail(function () {
+                    body.html('<p class="text-danger mb-0">Could not load the asset list.</p>');
+                });
+        }
+
+        function renderItems(items) {
+            if (!items || !items.length) {
+                return '';
+            }
+
+            return '<ul class="list-unstyled ml-3 mb-2">' + items.map(function (item) {
+                return '<li>'
+                    + escapeHtml(item.name)
+                    + (item.quantity > 1 ? ' &times;' + item.quantity.toLocaleString() : '')
+                    + (item.value > 0
+                        ? ' <span class="text-muted small">(' + Math.round(item.value).toLocaleString() + ' ISK)</span>'
+                        : '')
+                    + renderItems(item.children)
+                    + '</li>';
+            }).join('') + '</ul>';
+        }
+
+        function render(member, slices, unresolved, home, characterId) {
+            selected = { member: member, slices: slices, characterId: characterId };
             $('#me-region-title').text('Assets by region - ' + member);
 
             // These slices are of everything held. Home presence ignores
@@ -356,10 +430,12 @@
             );
 
             $('#me-region-legend').html(slices.map(function (slice) {
-                return '<tr>'
+                var isUnknown = slice.region_id === 'unknown';
+                return '<tr' + (isUnknown ? ' class="me-unknown-link" style="cursor:pointer;"' : '') + '>'
                     + '<td style="width:1.5rem;"><span style="display:inline-block;width:.75rem;height:.75rem;'
                     + 'border-radius:2px;background:' + slice.colour + ';"></span></td>'
-                    + '<td>' + escapeHtml(slice.name) + '</td>'
+                    + '<td>' + escapeHtml(slice.name)
+                    + (isUnknown ? ' <span class="badge badge-light">view</span>' : '') + '</td>'
                     + '<td class="text-right">' + slice.percent.toFixed(1) + '%</td>'
                     + '</tr>';
             }).join(''));
@@ -382,6 +458,11 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    onClick: function (event, elements) {
+                        if (elements.length && slices[elements[0]._index].region_id === 'unknown') {
+                            openUnknown();
+                        }
+                    },
                     // Identity comes from the table legend beside the chart,
                     // so the built-in one would just repeat it.
                     legend: { display: false },
@@ -408,8 +489,13 @@
             var row = $(this);
             rows.removeClass('table-active');
             row.addClass('table-active');
-            render(row.data('member'), row.data('slices'), row.data('unresolved'), row.data('home'));
+            render(
+                row.data('member'), row.data('slices'),
+                row.data('unresolved'), row.data('home'), row.data('character')
+            );
         });
+
+        $('#me-region-legend').on('click', 'tr.me-unknown-link', openUnknown);
 
         // Open on the least-present account - the one worth looking at.
         rows.first().trigger('click');

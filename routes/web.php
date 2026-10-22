@@ -15,6 +15,10 @@ Route::middleware(['web', 'auth', 'verified'])
         Route::get('/director', [DirectorController::class, 'index'])
             ->name('director.index');
 
+        Route::get('/director/unresolved-assets/{characterId}', [DirectorController::class, 'unresolvedAssets'])
+            ->whereNumber('characterId')
+            ->name('director.unresolved-assets');
+
         Route::get('/settings', [SettingsController::class, 'index'])
             ->name('settings');
         Route::post('/settings', [SettingsController::class, 'store'])

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RCI\MemberEngagement\Models\MemberEngagementSetting;
+use RCI\MemberEngagement\Services\AccountConsolidationService;
 use RCI\MemberEngagement\Services\NetWorthService;
 use RCI\MemberEngagement\Services\RankingService;
 
@@ -14,6 +15,7 @@ class DirectorController
     public function __construct(
         private RankingService $rankingService,
         private NetWorthService $netWorthService,
+        private AccountConsolidationService $consolidation,
     ) {
     }
 
@@ -46,6 +48,30 @@ class DirectorController
             'month' => $month,
             'isCurrentMonth' => $isCurrentMonth,
             'availableMonths' => $this->rankingService->availableMonths(),
+        ]);
+    }
+
+    /**
+     * The assets behind an account's "unknown location" slice. Loaded on
+     * demand rather than embedded in every page - it's small here but
+     * scales with the number of registered characters.
+     */
+    public function unresolvedAssets(Request $request, int $characterId)
+    {
+        $user = Auth::user();
+
+        if (!$user->can('member-engagement.view_all_activities')) {
+            abort(403, 'Unauthorized');
+        }
+
+        $group = $this->consolidation->allAccountGroups()[$characterId] ?? null;
+
+        if ($group === null) {
+            abort(404, 'Not a registered main character');
+        }
+
+        return response()->json([
+            'locations' => $this->netWorthService->unresolvedAssets($group),
         ]);
     }
 }
