@@ -71,6 +71,21 @@ class AggregationService
             $logins = $logins->filter(fn($key) => str_starts_with($key, $corporationId . '|'));
         }
 
+        // Mining tax comes from Mining Manager's own daily rollup, which is
+        // already per character/day/corp - no need to copy it through our
+        // Activity table first.
+        $miningTaxQuery = DB::table('mining_ledger_daily_summaries')
+            ->whereDate('date', $date->toDateString())
+            ->whereNotNull('corporation_id');
+
+        if ($corporationId) {
+            $miningTaxQuery->where('corporation_id', $corporationId);
+        }
+
+        $miningTax = $miningTaxQuery
+            ->get(['corporation_id', 'character_id', 'total_tax'])
+            ->mapWithKeys(fn($row) => [$row->corporation_id . '|' . $row->character_id => (float) $row->total_tax]);
+
         // Fleet Participation's minimum size is a single global setting,
         // applying regardless of corporation.
         $fleetMinSize = MemberEngagementSetting::current()->fleet_participation_min_size
@@ -81,8 +96,9 @@ class AggregationService
             return $activity->corporation_id . '|' . $activity->character_id;
         });
 
-        // Every key with activity and/or a detected login this day needs a row.
-        $keys = $grouped->keys()->merge($logins)->unique();
+        // Every key with activity, a detected login, and/or mining tax this
+        // day needs a row.
+        $keys = $grouped->keys()->merge($logins)->merge($miningTax->keys())->unique();
 
         // character_onlines is a continuously-overwritten snapshot, so
         // re-checking it on a later run can miss a login it already caught
@@ -112,6 +128,9 @@ class AggregationService
                 'pvp_kills' => 0,
                 'pvp_losses' => 0,
                 'fleet_participation' => 0,
+                'mining_tax_amount' => $miningTax[$key] ?? 0,
+                'isk_destroyed' => 0,
+                'isk_lost' => 0,
             ];
 
             // Aggregate by activity type
@@ -120,8 +139,14 @@ class AggregationService
                     'mining' => $stats['mining_quantity'] += $activity->metadata['quantity'] ?? 0,
                     'pve_bounty_tax' => $stats['pve_bounty_amount'] += $activity->metadata['amount'] ?? 0,
                     'industry_tax' => $stats['industry_tax_amount'] += $activity->metadata['amount'] ?? 0,
-                    'pvp_kill' => $stats['pvp_kills'] += 1,
-                    'pvp_loss' => $stats['pvp_losses'] += 1,
+                    'pvp_kill' => [
+                        $stats['pvp_kills'] += 1,
+                        $stats['isk_destroyed'] += $activity->metadata['isk_value'] ?? 0,
+                    ],
+                    'pvp_loss' => [
+                        $stats['pvp_losses'] += 1,
+                        $stats['isk_lost'] += $activity->metadata['isk_value'] ?? 0,
+                    ],
                     default => null,
                 };
             }

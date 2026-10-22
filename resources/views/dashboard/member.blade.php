@@ -36,8 +36,9 @@
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-3">
+                    <h5>Tax Contributions</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-4">
                             <div class="card bg-light">
                                 <div class="card-body text-center">
                                     <h6 class="card-title text-muted">PvE Bounty &amp; Tax</h6>
@@ -45,7 +46,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="card bg-light">
                                 <div class="card-body text-center">
                                     <h6 class="card-title text-muted">Industry Tax</h6>
@@ -53,19 +54,55 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="card bg-light">
                                 <div class="card-body text-center">
-                                    <h6 class="card-title text-muted">PvP Kills</h6>
+                                    <h6 class="card-title text-muted">Mining Tax</h6>
+                                    <h3 class="mb-0">{{ number_format($stats->mining_tax_amount) }} ISK</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5>PvP</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-muted">Kills</h6>
                                     <h3 class="mb-0">{{ $stats->pvp_kills }}</h3>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-muted">ISK Destroyed</h6>
+                                    <h3 class="mb-0">{{ number_format($stats->isk_destroyed) }} ISK</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
                             <div class="card bg-light">
                                 <div class="card-body text-center">
                                     <h6 class="card-title text-muted">Fleet Participation</h6>
                                     <h3 class="mb-0">{{ $stats->fleet_participation }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-muted">Losses</h6>
+                                    <h3 class="mb-0">{{ $stats->pvp_losses }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-muted">ISK Lost</h6>
+                                    <h3 class="mb-0">{{ number_format($stats->isk_lost) }} ISK</h3>
                                 </div>
                             </div>
                         </div>

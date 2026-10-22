@@ -9,10 +9,10 @@ use RCI\MemberEngagement\Models\DailyMemberStat;
 use RCI\MemberEngagement\Models\MonthlyMemberStat;
 
 /**
- * Builds the Corporation View leaderboards (PvE Bounty & Tax, Industry Tax,
- * PvP kills, fleet participation) for a given month, consolidating linked
- * alts under their account's main character. Also builds the equivalent
- * single-account figures for the My Activities page.
+ * Builds the Corporation View leaderboards (tax contributions and PvP) for
+ * a given month, consolidating linked alts under their account's main
+ * character. Also builds the equivalent single-account figures for the My
+ * Activities page, and the Heartbeat login list.
  */
 class RankingService
 {
@@ -25,14 +25,18 @@ class RankingService
     }
 
     /**
-     * @return array{pve_bounty: array, industry_tax: array, kills: array, fleet: array}
+     * One leaderboard per entry in RANKED_METRICS, each a list of
+     * consolidated accounts sorted high to low with zero-value entries
+     * dropped.
+     *
+     * @return array<string, array>
      */
     public function buildRankings(Carbon $month, bool $isCurrentMonth): array
     {
         $rows = $this->rowsForMonth($month, $isCurrentMonth);
 
         if ($rows->isEmpty()) {
-            return ['pve_bounty' => [], 'industry_tax' => [], 'kills' => [], 'fleet' => []];
+            return $this->emptyRankings();
         }
 
         $groupMap = $this->consolidation->resolveGroups($rows->pluck('character_id')->unique()->all());
@@ -42,27 +46,42 @@ class RankingService
         $rows = $rows->filter(fn($r) => isset($groupMap[$r->character_id]));
 
         if ($rows->isEmpty()) {
-            return ['pve_bounty' => [], 'industry_tax' => [], 'kills' => [], 'fleet' => []];
+            return $this->emptyRankings();
         }
 
         $consolidated = $this->consolidate($rows, $groupMap);
 
         $this->entityResolution->attachDisplayNames($consolidated);
 
-        return [
-            'pve_bounty' => $consolidated->filter(fn($r) => $r->pve_bounty_amount > 0)
-                ->sortByDesc('pve_bounty_amount')->take(self::MAX_RESULTS)->values()->all(),
-            'industry_tax' => $consolidated->filter(fn($r) => $r->industry_tax_amount > 0)
-                ->sortByDesc('industry_tax_amount')->take(self::MAX_RESULTS)->values()->all(),
-            'kills' => $consolidated->filter(fn($r) => $r->pvp_kills > 0)
-                ->sortByDesc('pvp_kills')->take(self::MAX_RESULTS)->values()->all(),
-            'fleet' => $consolidated->filter(fn($r) => $r->fleet_participation > 0)
-                ->sortByDesc('fleet_participation')->take(self::MAX_RESULTS)->values()->all(),
-        ];
+        return collect(self::RANKED_METRICS)
+            ->mapWithKeys(fn($field, $key) => [
+                $key => $consolidated->filter(fn($r) => $r->{$field} > 0)
+                    ->sortByDesc($field)->take(self::MAX_RESULTS)->values()->all(),
+            ])
+            ->all();
     }
 
     /**
-     * The same four figures as buildRankings(), but summed across just the
+     * Leaderboard key => the consolidated field it ranks on.
+     */
+    private const RANKED_METRICS = [
+        'pve_bounty' => 'pve_bounty_amount',
+        'industry_tax' => 'industry_tax_amount',
+        'mining_tax' => 'mining_tax_amount',
+        'kills' => 'pvp_kills',
+        'isk_destroyed' => 'isk_destroyed',
+        'losses' => 'pvp_losses',
+        'isk_lost' => 'isk_lost',
+        'fleet' => 'fleet_participation',
+    ];
+
+    private function emptyRankings(): array
+    {
+        return array_fill_keys(array_keys(self::RANKED_METRICS), []);
+    }
+
+    /**
+     * The same figures as buildRankings(), but summed across just the
      * given character IDs (one SeAT account's main + linked alts) rather
      * than ranked against the rest of the corporation.
      */
@@ -75,7 +94,11 @@ class RankingService
         return (object) [
             'pve_bounty_amount' => (float) $rows->sum('pve_bounty_amount'),
             'industry_tax_amount' => (float) $rows->sum('industry_tax_amount'),
+            'mining_tax_amount' => (float) $rows->sum('mining_tax_amount'),
             'pvp_kills' => (int) $rows->sum('pvp_kills'),
+            'pvp_losses' => (int) $rows->sum('pvp_losses'),
+            'isk_destroyed' => (float) $rows->sum('isk_destroyed'),
+            'isk_lost' => (float) $rows->sum('isk_lost'),
             'fleet_participation' => (int) $rows->sum('fleet_participation'),
         ];
     }
@@ -227,7 +250,11 @@ class RankingService
                     'member_count' => $groupRows->pluck('character_id')->unique()->count(),
                     'pve_bounty_amount' => (float) $groupRows->sum('pve_bounty_amount'),
                     'industry_tax_amount' => (float) $groupRows->sum('industry_tax_amount'),
+                    'mining_tax_amount' => (float) $groupRows->sum('mining_tax_amount'),
                     'pvp_kills' => (int) $groupRows->sum('pvp_kills'),
+                    'pvp_losses' => (int) $groupRows->sum('pvp_losses'),
+                    'isk_destroyed' => (float) $groupRows->sum('isk_destroyed'),
+                    'isk_lost' => (float) $groupRows->sum('isk_lost'),
                     'fleet_participation' => (int) $groupRows->sum('fleet_participation'),
                 ];
             })
@@ -249,7 +276,11 @@ class RankingService
                     'corporation_id' => $first->corporation_id,
                     'pve_bounty_amount' => $dayRows->sum('pve_bounty_amount'),
                     'industry_tax_amount' => $dayRows->sum('industry_tax_amount'),
+                    'mining_tax_amount' => $dayRows->sum('mining_tax_amount'),
                     'pvp_kills' => $dayRows->sum('pvp_kills'),
+                    'pvp_losses' => $dayRows->sum('pvp_losses'),
+                    'isk_destroyed' => $dayRows->sum('isk_destroyed'),
+                    'isk_lost' => $dayRows->sum('isk_lost'),
                     'fleet_participation' => $dayRows->sum('fleet_participation'),
                 ];
             })

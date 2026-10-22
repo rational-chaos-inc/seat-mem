@@ -45,6 +45,9 @@ class MonthlyAggregationService
                     'pvp_kills' => $dayRows->sum('pvp_kills'),
                     'pvp_losses' => $dayRows->sum('pvp_losses'),
                     'fleet_participation' => $dayRows->sum('fleet_participation'),
+                    'mining_tax_amount' => $dayRows->sum('mining_tax_amount'),
+                    'isk_destroyed' => $dayRows->sum('isk_destroyed'),
+                    'isk_lost' => $dayRows->sum('isk_lost'),
                 ]
             );
             $count++;

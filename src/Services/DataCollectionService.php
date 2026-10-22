@@ -63,6 +63,38 @@ class DataCollectionService
         return $count;
     }
 
+    /**
+     * Total ISK value per killmail: the victim's hull plus everything
+     * destroyed and dropped, priced against SeAT's market_prices.
+     *
+     * SeAT stores no value on killmails, so this is computed. It's an
+     * approximation - ESI's average_price is not what zKillboard quotes,
+     * and items with no price row count as zero.
+     *
+     * @return \Illuminate\Support\Collection killmail_id => value
+     */
+    private function killmailValues(Carbon $since)
+    {
+        $itemValues = DB::table('killmail_victim_items')
+            ->join('killmail_details', 'killmail_details.killmail_id', '=', 'killmail_victim_items.killmail_id')
+            ->join('market_prices', 'market_prices.type_id', '=', 'killmail_victim_items.item_type_id')
+            ->where('killmail_details.killmail_time', '>=', $since)
+            ->groupBy('killmail_victim_items.killmail_id')
+            ->selectRaw('killmail_victim_items.killmail_id, SUM((COALESCE(quantity_destroyed,0) + COALESCE(quantity_dropped,0)) * market_prices.average_price) AS items_value')
+            ->pluck('items_value', 'killmail_id');
+
+        $hullValues = DB::table('killmail_victims')
+            ->join('killmail_details', 'killmail_details.killmail_id', '=', 'killmail_victims.killmail_id')
+            ->join('market_prices', 'market_prices.type_id', '=', 'killmail_victims.ship_type_id')
+            ->where('killmail_details.killmail_time', '>=', $since)
+            ->pluck('market_prices.average_price', 'killmail_victims.killmail_id');
+
+        return $hullValues->keys()
+            ->merge($itemValues->keys())
+            ->unique()
+            ->mapWithKeys(fn($id) => [$id => (float) ($hullValues[$id] ?? 0) + (float) ($itemValues[$id] ?? 0)]);
+    }
+
     private function collectKillData(?Carbon $since = null): int
     {
         $count = 0;
@@ -77,6 +109,13 @@ class DataCollectionService
                 ->select('killmail_id', DB::raw('COUNT(*) as attacker_count'))
                 ->groupBy('killmail_id')
                 ->pluck('attacker_count', 'killmail_id');
+
+            // Every attacker on a killmail is credited with its full value,
+            // the same convention zKillboard uses (and the same one this
+            // plugin already applies to kill counts). A corp-wide total of
+            // isk_destroyed therefore counts shared kills once per
+            // participant, not once per kill.
+            $killmailValues = $this->killmailValues($since);
 
             $kills = DB::table('killmail_details')
                 ->join('killmail_attackers', 'killmail_details.killmail_id', '=', 'killmail_attackers.killmail_id')
@@ -112,6 +151,7 @@ class DataCollectionService
                             'victim_character_id' => $kill->victim_character_id,
                             'ship_type_id' => $kill->ship_type_id,
                             'attacker_count' => $attackerCounts[$kill->killmail_id] ?? 1,
+                            'isk_value' => $killmailValues[$kill->killmail_id] ?? 0,
                         ],
                     ]
                 );
@@ -134,6 +174,8 @@ class DataCollectionService
             if (!$since) {
                 $since = Carbon::now()->subDays(90);
             }
+
+            $killmailValues = $this->killmailValues($since);
 
             $losses = DB::table('killmail_details')
                 ->join('killmail_victims', 'killmail_details.killmail_id', '=', 'killmail_victims.killmail_id')
@@ -171,6 +213,7 @@ class DataCollectionService
                             'killmail_id' => $loss->killmail_id,
                             'final_blow_by' => $loss->final_blow_by,
                             'ship_type_id' => $loss->ship_type_id,
+                            'isk_value' => $killmailValues[$loss->killmail_id] ?? 0,
                         ],
                     ]
                 );

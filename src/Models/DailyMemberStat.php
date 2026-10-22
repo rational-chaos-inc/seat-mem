@@ -20,6 +20,9 @@ class DailyMemberStat extends Model
         'pvp_kills',
         'pvp_losses',
         'fleet_participation',
+        'mining_tax_amount',
+        'isk_destroyed',
+        'isk_lost',
     ];
 
     protected $casts = [
@@ -32,5 +35,8 @@ class DailyMemberStat extends Model
         'pvp_kills' => 'integer',
         'pvp_losses' => 'integer',
         'fleet_participation' => 'integer',
+        'mining_tax_amount' => 'decimal:2',
+        'isk_destroyed' => 'decimal:2',
+        'isk_lost' => 'decimal:2',
     ];
 }

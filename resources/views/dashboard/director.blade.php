@@ -5,6 +5,7 @@
 @section('content')
 <div class="row">
     <div class="col-md-12">
+
         <div class="card">
             <div class="card-header">
                 <h4 class="card-title">Corporation Activities</h4>
@@ -17,7 +18,7 @@
                 </div>
             </div>
             <div class="card-body">
-                <div class="row mb-3">
+                <div class="row">
                     <div class="col-md-12">
                         <label>Month:</label>
                         <div class="btn-group flex-wrap" role="group">
@@ -31,141 +32,91 @@
                     </div>
                 </div>
 
-                <p class="text-muted">
+                <p class="text-muted mt-3 mb-0">
                     Scoped to registered SeAT members only - each entry is a main character with
                     any linked alts' activity consolidated under it. Characters whose owner hasn't
                     registered with SeAT aren't included here.
                 </p>
+            </div>
+        </div>
 
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Tax Contributions</h4>
+            </div>
+            <div class="card-body">
                 <div class="row">
-                    <div class="col-md-3">
-                        <h5>PvE Bounty &amp; Tax</h5>
-                        <div class="small text-muted mb-2">Bounty prizes and daily goal payouts</div>
-                        @if(empty($rankings['pve_bounty']))
-                            <div class="alert alert-info">No data for this month</div>
-                        @else
-                            <table class="table table-sm table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Member</th>
-                                        <th class="text-right">ISK</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($rankings['pve_bounty'] as $row)
-                                        <tr>
-                                            <td>{{ $loop->iteration }}</td>
-                                            <td>
-                                                {{ $row->display_name }}
-                                                @if($row->member_count > 1)
-                                                    <span class="badge badge-secondary" title="Consolidated characters">{{ $row->member_count }}</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-right">{{ number_format($row->pve_bounty_amount) }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        @endif
-                    </div>
-
-                    <div class="col-md-3">
-                        <h5>Industry Tax</h5>
-                        <div class="small text-muted mb-2">Facility tax from industry jobs</div>
-                        @if(empty($rankings['industry_tax']))
-                            <div class="alert alert-info">No data for this month</div>
-                        @else
-                            <table class="table table-sm table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Member</th>
-                                        <th class="text-right">ISK</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($rankings['industry_tax'] as $row)
-                                        <tr>
-                                            <td>{{ $loop->iteration }}</td>
-                                            <td>
-                                                {{ $row->display_name }}
-                                                @if($row->member_count > 1)
-                                                    <span class="badge badge-secondary" title="Consolidated characters">{{ $row->member_count }}</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-right">{{ number_format($row->industry_tax_amount) }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        @endif
-                    </div>
-
-                    <div class="col-md-3">
-                        <h5>Top PvP (Kills)</h5>
-                        <div class="small text-muted mb-2">Total kills, all engagements</div>
-                        @if(empty($rankings['kills']))
-                            <div class="alert alert-info">No data for this month</div>
-                        @else
-                            <table class="table table-sm table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Member</th>
-                                        <th class="text-right">Kills</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($rankings['kills'] as $row)
-                                        <tr>
-                                            <td>{{ $loop->iteration }}</td>
-                                            <td>
-                                                {{ $row->display_name }}
-                                                @if($row->member_count > 1)
-                                                    <span class="badge badge-secondary" title="Consolidated characters">{{ $row->member_count }}</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-right">{{ $row->pvp_kills }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        @endif
-                    </div>
-
-                    <div class="col-md-3">
-                        <h5>Top Fleet Participation</h5>
-                        <div class="small text-muted mb-2">Configured minimum fleet size, 1/hour max</div>
-                        @if(empty($rankings['fleet']))
-                            <div class="alert alert-info">No data for this month</div>
-                        @else
-                            <table class="table table-sm table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Member</th>
-                                        <th class="text-right">Instances</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($rankings['fleet'] as $row)
-                                        <tr>
-                                            <td>{{ $loop->iteration }}</td>
-                                            <td>
-                                                {{ $row->display_name }}
-                                                @if($row->member_count > 1)
-                                                    <span class="badge badge-secondary" title="Consolidated characters">{{ $row->member_count }}</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-right">{{ $row->fleet_participation }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        @endif
-                    </div>
+                    @include('member-engagement::dashboard.partials.leaderboard', [
+                        'rows' => $rankings['pve_bounty'],
+                        'field' => 'pve_bounty_amount',
+                        'heading' => 'PvE Bounty & Tax',
+                        'subtitle' => 'Bounty prizes and daily goal payouts',
+                        'valueLabel' => 'ISK',
+                    ])
+                    @include('member-engagement::dashboard.partials.leaderboard', [
+                        'rows' => $rankings['industry_tax'],
+                        'field' => 'industry_tax_amount',
+                        'heading' => 'Industry Tax',
+                        'subtitle' => 'Facility tax from industry jobs',
+                        'valueLabel' => 'ISK',
+                    ])
+                    @include('member-engagement::dashboard.partials.leaderboard', [
+                        'rows' => $rankings['mining_tax'],
+                        'field' => 'mining_tax_amount',
+                        'heading' => 'Mining Tax',
+                        'subtitle' => 'Tax on mined ore, from Mining Manager',
+                        'valueLabel' => 'ISK',
+                    ])
                 </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">PvP</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @include('member-engagement::dashboard.partials.leaderboard', [
+                        'rows' => $rankings['kills'],
+                        'field' => 'pvp_kills',
+                        'heading' => 'Top PvP (Kills)',
+                        'subtitle' => 'Killmails the member was an attacker on',
+                        'valueLabel' => 'Kills',
+                    ])
+                    @include('member-engagement::dashboard.partials.leaderboard', [
+                        'rows' => $rankings['isk_destroyed'],
+                        'field' => 'isk_destroyed',
+                        'heading' => 'Top PvP (ISK Destroyed)',
+                        'subtitle' => 'Full value of each kill, credited to every attacker',
+                        'valueLabel' => 'ISK',
+                    ])
+                    @include('member-engagement::dashboard.partials.leaderboard', [
+                        'rows' => $rankings['fleet'],
+                        'field' => 'fleet_participation',
+                        'heading' => 'Top Fleet Participation',
+                        'subtitle' => 'Configured minimum fleet size, 1/hour max',
+                        'valueLabel' => 'Instances',
+                    ])
+                    @include('member-engagement::dashboard.partials.leaderboard', [
+                        'rows' => $rankings['losses'],
+                        'field' => 'pvp_losses',
+                        'heading' => 'Losses',
+                        'subtitle' => 'Killmails the member was the victim on',
+                        'valueLabel' => 'Losses',
+                    ])
+                    @include('member-engagement::dashboard.partials.leaderboard', [
+                        'rows' => $rankings['isk_lost'],
+                        'field' => 'isk_lost',
+                        'heading' => 'ISK Lost',
+                        'subtitle' => 'Value of ships and fittings lost',
+                        'valueLabel' => 'ISK',
+                    ])
+                </div>
+                <p class="small text-muted mb-0">
+                    ISK values are estimated from the victim's hull plus destroyed and dropped
+                    items, priced against SeAT's market data - they won't match zKillboard exactly.
+                </p>
             </div>
         </div>
 
@@ -218,6 +169,7 @@
                 @endif
             </div>
         </div>
+
     </div>
 </div>
 @endsection
