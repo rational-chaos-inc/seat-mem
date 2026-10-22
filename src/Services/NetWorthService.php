@@ -31,6 +31,19 @@ class NetWorthService
     /** invCategories.categoryID for ships. */
     private const SHIP_CATEGORY_ID = 6;
 
+    /**
+     * Slices shown individually on the region pie before the tail is folded
+     * into "Other". Three is what the categorical palette is documented to
+     * guarantee when every pair can be compared against every other, which
+     * is how a pie is read. Asset value is concentrated enough (one home
+     * region typically holds 90%+) that the tail is tiny anyway.
+     */
+    private const PIE_SLICES = 3;
+
+    /** Categorical slots 1-3, plus a neutral for the folded tail. */
+    private const SLICE_COLOURS = ['#2a78d6', '#eb6834', '#1baf7a'];
+    private const OTHER_COLOUR = '#8a8a85';
+
     public function __construct(
         private AccountConsolidationService $consolidation,
         private EntityResolutionService $entityResolution,
@@ -204,8 +217,60 @@ class NetWorthService
         }
 
         $this->entityResolution->attachDisplayNames($accounts);
+        $this->attachRegionBreakdown($accounts);
 
         return $accounts->sortByDesc('net_worth')->values()->all();
+    }
+
+    /**
+     * Turns each account's raw region map into something presentable: every
+     * region named and ranked, plus the handful of slices the pie draws.
+     */
+    private function attachRegionBreakdown(Collection $accounts): void
+    {
+        $regionIds = $accounts
+            ->flatMap(fn($account) => array_keys($account->regions))
+            ->reject(fn($id) => $id === self::UNKNOWN_REGION)
+            ->unique();
+
+        $names = $regionIds->isEmpty()
+            ? collect()
+            : DB::table('regions')->whereIn('region_id', $regionIds)->pluck('name', 'region_id');
+
+        foreach ($accounts as $account) {
+            $total = array_sum($account->regions);
+
+            $breakdown = collect($account->regions)
+                ->map(fn($value, $regionId) => [
+                    'region_id' => $regionId,
+                    'name' => $regionId === self::UNKNOWN_REGION
+                        ? 'Unresolved location'
+                        : ($names[$regionId] ?? "Region {$regionId}"),
+                    'value' => (float) $value,
+                    'percent' => $total > 0 ? ((float) $value / $total) * 100 : 0,
+                ])
+                ->sortByDesc('value')
+                ->values();
+
+            $account->region_breakdown = $breakdown->all();
+
+            $slices = $breakdown->take(self::PIE_SLICES)->values()
+                ->map(fn($slice, $index) => $slice + ['colour' => self::SLICE_COLOURS[$index]])
+                ->all();
+
+            $tail = $breakdown->slice(self::PIE_SLICES);
+            if ($tail->isNotEmpty()) {
+                $slices[] = [
+                    'region_id' => 'other',
+                    'name' => 'Other (' . $tail->count() . ' regions)',
+                    'value' => (float) $tail->sum('value'),
+                    'percent' => (float) $tail->sum('percent'),
+                    'colour' => self::OTHER_COLOUR,
+                ];
+            }
+
+            $account->chart_slices = $slices;
+        }
     }
 
     /**

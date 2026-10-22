@@ -203,49 +203,68 @@
                     @else
                         <strong>{{ implode(', ', $homeRegionNames) }}</strong>.
                     @endif
-                    Anything below {{ $minimumHomePresence }}% is highlighted. Least present accounts first.
+                    Anything below {{ $minimumHomePresence }}% is highlighted. Least present accounts
+                    first - select a member to see where their assets actually sit.
                 </p>
 
                 @php
-                    $placedAccounts = collect($netWorth)->filter(fn($r) => $r->home_presence !== null)->sortBy('home_presence');
+                    $placedAccounts = collect($netWorth)
+                        ->filter(fn($r) => $r->home_presence !== null)
+                        ->sortBy('home_presence')
+                        ->values();
                 @endphp
 
                 @if($placedAccounts->isEmpty() || empty($homeRegionNames))
                     <div class="alert alert-info">Nothing to compare yet</div>
                 @else
-                    <table class="table table-sm table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Member</th>
-                                <th class="text-right">Home Presence</th>
-                                <th class="text-right">Value at Home</th>
-                                <th class="text-right">Value Elsewhere</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($placedAccounts as $row)
-                                <tr @class(['table-danger' => $row->below_threshold])>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>
-                                        {{ $row->display_name }}
-                                        @if($row->member_count > 1)
-                                            <span class="badge badge-secondary" title="Consolidated characters">{{ $row->member_count }}</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-right">
-                                        @if($row->below_threshold)
-                                            <span class="badge badge-danger">{{ number_format($row->home_presence, 1) }}%</span>
-                                        @else
-                                            {{ number_format($row->home_presence, 1) }}%
-                                        @endif
-                                    </td>
-                                    <td class="text-right">{{ number_format($row->value_at_home) }}</td>
-                                    <td class="text-right">{{ number_format($row->value_elsewhere) }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                    <div class="row">
+                        <div class="col-lg-7">
+                            <table class="table table-sm table-striped table-hover w-auto" id="home-presence-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Member</th>
+                                        <th class="text-right">Home Presence</th>
+                                        <th class="text-right">Value at Home</th>
+                                        <th class="text-right">Value Elsewhere</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($placedAccounts as $row)
+                                        <tr class="me-region-row @if($row->below_threshold) table-danger @endif"
+                                            style="cursor: pointer;"
+                                            data-member="{{ $row->display_name }}"
+                                            data-slices="{{ json_encode($row->chart_slices) }}">
+                                            <td>{{ $loop->iteration }}</td>
+                                            <td>
+                                                {{ $row->display_name }}
+                                                @if($row->member_count > 1)
+                                                    <span class="badge badge-secondary" title="Consolidated characters">{{ $row->member_count }}</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-right">
+                                                @if($row->below_threshold)
+                                                    <span class="badge badge-danger">{{ number_format($row->home_presence, 1) }}%</span>
+                                                @else
+                                                    {{ number_format($row->home_presence, 1) }}%
+                                                @endif
+                                            </td>
+                                            <td class="text-right">{{ number_format($row->value_at_home) }}</td>
+                                            <td class="text-right">{{ number_format($row->value_elsewhere) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="col-lg-5">
+                            <h6 class="text-muted" id="me-region-title">Assets by region</h6>
+                            <div style="position: relative; height: 230px;">
+                                <canvas id="me-region-chart"></canvas>
+                            </div>
+                            <table class="table table-sm mt-2 mb-0" id="me-region-legend"></table>
+                        </div>
+                    </div>
                 @endif
             </div>
         </div>
@@ -303,3 +322,83 @@
     </div>
 </div>
 @endsection
+
+@push('javascript')
+<script type="text/javascript">
+    $(function () {
+        var canvas = document.getElementById('me-region-chart');
+        if (!canvas) {
+            return;
+        }
+
+        // Chart.js 2.9 is already loaded by SeAT's layout.
+        var chart = null;
+
+        function escapeHtml(text) {
+            return $('<div>').text(text).html();
+        }
+
+        function render(member, slices) {
+            $('#me-region-title').text('Assets by region - ' + member);
+
+            $('#me-region-legend').html(slices.map(function (slice) {
+                return '<tr>'
+                    + '<td style="width:1.5rem;"><span style="display:inline-block;width:.75rem;height:.75rem;'
+                    + 'border-radius:2px;background:' + slice.colour + ';"></span></td>'
+                    + '<td>' + escapeHtml(slice.name) + '</td>'
+                    + '<td class="text-right">' + slice.percent.toFixed(1) + '%</td>'
+                    + '</tr>';
+            }).join(''));
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(canvas.getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels: slices.map(function (slice) { return slice.name; }),
+                    datasets: [{
+                        data: slices.map(function (slice) { return slice.value; }),
+                        backgroundColor: slices.map(function (slice) { return slice.colour; }),
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    // Identity comes from the table legend beside the chart,
+                    // so the built-in one would just repeat it.
+                    legend: { display: false },
+                    tooltips: {
+                        callbacks: {
+                            label: function (item, data) {
+                                var values = data.datasets[0].data;
+                                var value = values[item.index];
+                                var total = values.reduce(function (a, b) { return a + b; }, 0);
+                                var percent = total ? (value / total * 100).toFixed(1) : '0.0';
+
+                                return data.labels[item.index] + ': ' + percent
+                                    + '% (' + Math.round(value).toLocaleString() + ' ISK)';
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        var rows = $('#home-presence-table tr.me-region-row');
+
+        rows.on('click', function () {
+            var row = $(this);
+            rows.removeClass('table-active');
+            row.addClass('table-active');
+            render(row.data('member'), row.data('slices'));
+        });
+
+        // Open on the least-present account - the one worth looking at.
+        rows.first().trigger('click');
+    });
+</script>
+@endpush
