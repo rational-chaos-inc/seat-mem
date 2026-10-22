@@ -39,7 +39,12 @@ on a Corporation View, plus each member's own figures on My Activities.
   and containers, and ESI reports Upwell structures as items too
 - **Home Presence** — what share of an account's asset value sits in the
   regions you've designated as home. Anything below the configured minimum
-  (default 80%) is highlighted
+  (default 80%) is highlighted. Clicking a member breaks their assets down
+  by region as a pie; the Asset Safety, Customs Offices, Unknown and Other
+  slices can be clicked again to list the assets behind them, nested as
+  they sit. Asset safety counts as away (we know where it is, it just
+  isn't usable there); customs offices and unresolvable locations are left
+  out of the calculation entirely
 - **Settings page** — a single set of per-metric visibility (Directors /
   Members / Both), weighting, Fleet Participation minimum size, the home
   presence minimum, and the managed list of home regions, applying to the
