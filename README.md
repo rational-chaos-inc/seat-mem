@@ -48,9 +48,9 @@ on a Corporation View, plus each member's own figures on My Activities.
   isn't usable there); customs offices and unresolvable locations are left
   out of the calculation entirely
 - **Settings page** — a single set of per-metric visibility (Directors /
-  Members / Both), weighting, Fleet Participation minimum size, the home
-  presence minimum, and the managed list of home regions, applying to the
-  whole install regardless of corporation
+  Members / Both), weighting, Fleet Participation minimum size, the
+  presence minimum, and the managed home and deployment region lists,
+  applying to the whole install regardless of corporation
 
 ## Prerequisites
 
