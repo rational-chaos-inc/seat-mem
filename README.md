@@ -37,12 +37,14 @@ on a Corporation View, plus each member's own figures on My Activities.
   no region and would otherwise sit in the unknown bucket. Assets are resolved to the region they actually sit in, which
   means walking the containment tree - most assets are nested inside ships
   and containers, and ESI reports Upwell structures as items too
-- **Home Presence** — what share of an account's asset value sits in the
-  regions you've designated as home. Anything below the configured minimum
-  (default 80%) is highlighted. Clicking a member breaks their assets down
-  by region as a pie; the Asset Safety, Customs Offices, Unknown and Other
-  slices can be clicked again to list the assets behind them, nested as
-  they sit. Asset safety counts as away (we know where it is, it just
+- **Home + Deployed Presence** — what share of an account's asset value
+  sits in the regions you've designated as home or as the current
+  deployment. The two count the same and are measured together against the
+  configured minimum (default 80%); anything below is highlighted, and the
+  table breaks out home and deployed separately. Clicking a member breaks
+  their assets down by region as a pie; any slice that isn't a home or
+  deployment region can be clicked again to list the assets behind it,
+  nested as they sit. Asset safety counts as away (we know where it is, it just
   isn't usable there); customs offices and unresolvable locations are left
   out of the calculation entirely
 - **Settings page** — a single set of per-metric visibility (Directors /
@@ -98,9 +100,9 @@ The package is published on Packagist as `rci/member-engagement`.
 4. **Configure the Director Settings page**
 
    Visit `/member-engagement/settings` as a director to set per-metric
-   visibility, weighting, and the Fleet Participation minimum size — one
-   set of settings for the whole install, applying regardless of
-   corporation. Sensible defaults apply automatically if you skip this.
+   visibility, weighting, the Fleet Participation minimum size, the
+   presence minimum, and the home and deployment region lists — one set of
+   settings for the whole install, applying regardless of corporation. Sensible defaults apply automatically if you skip this.
 
 Scheduled jobs register themselves automatically (via SeAT's own schedule
 seeding on plugin boot) — no manual seeding step needed.
