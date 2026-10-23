@@ -520,7 +520,7 @@ class NetWorthService
 
         $sql = <<<SQL
             WITH RECURSIVE roots AS (
-                SELECT a.item_id, a.character_id, a.type_id, a.quantity,
+                SELECT a.item_id, a.character_id, a.type_id, a.quantity, a.name AS asset_name,
                        a.is_blueprint_copy, a.location_id, a.location_id AS root_location, 0 AS depth,
                        CASE WHEN a.type_id = {$wrapType} OR a.location_flag = 'AssetSafety'
                             THEN 1 ELSE 0 END AS in_asset_safety
@@ -531,7 +531,7 @@ class NetWorthService
                       SELECT 1 FROM character_assets p WHERE p.item_id = a.location_id
                   )
                 UNION ALL
-                SELECT a.item_id, a.character_id, a.type_id, a.quantity,
+                SELECT a.item_id, a.character_id, a.type_id, a.quantity, a.name,
                        a.is_blueprint_copy, a.location_id, r.root_location, r.depth + 1,
                        GREATEST(r.in_asset_safety,
                                 CASE WHEN a.type_id = {$wrapType} OR a.location_flag = 'AssetSafety'
@@ -542,7 +542,7 @@ class NetWorthService
                   AND a.type_id NOT IN ({$plexTypes})
             )
             SELECT r.item_id, r.location_id, r.root_location, r.quantity, r.type_id,
-                   r.in_asset_safety,
+                   r.asset_name, r.in_asset_safety,
                    COALESCE(md_direct.regionID, md_struct.regionID) AS region_id,
                    COALESCE(it.typeName, CONCAT('Type ', r.type_id)) AS type_name,
                    ic.categoryID AS category_id,
@@ -598,6 +598,7 @@ class NetWorthService
                 ->map(fn($row) => [
                     'type_id' => (int) $row->type_id,
                     'name' => $row->type_name,
+                    'given_name' => $row->asset_name ?: null,
                     'quantity' => (int) $row->quantity,
                     'value' => (float) $row->value,
                     'children' => $build((string) $row->item_id),
@@ -609,13 +610,18 @@ class NetWorthService
         // Only the topmost wanted rows start a tree; the rest hang off them.
         $tops = $wanted->filter(fn($row) => !$wantedIds->has((string) $row->location_id));
 
+        $names = $this->locationNames($tops->pluck('root_location')->unique()->all(), $bucket);
+
         return $tops->groupBy(fn($row) => (string) $row->root_location)
             ->map(fn($group, $location) => [
                 'location_id' => (string) $location,
+                'location_name' => $names[(string) $location]['name'],
+                'location_type_id' => $names[(string) $location]['type_id'],
                 'total_value' => (float) $group->sum(fn($row) => $row->value + $this->descendantValue($childrenByParent, (string) $row->item_id)),
                 'items' => $group->map(fn($row) => [
                     'type_id' => (int) $row->type_id,
                     'name' => $row->type_name,
+                    'given_name' => $row->asset_name ?: null,
                     'quantity' => (int) $row->quantity,
                     'value' => (float) $row->value,
                     'children' => $build((string) $row->item_id),
@@ -624,6 +630,62 @@ class NetWorthService
             ->sortByDesc('total_value')
             ->values()
             ->all();
+    }
+
+    /**
+     * Names for the containers a drill-down groups by. Everything needed
+     * is already local: player structures SeAT has resolved, and the SDE
+     * for NPC stations. mapDenormalize covers most of the latter, but not
+     * all of them - Zarzakh's station is in staStations only - so both are
+     * consulted.
+     *
+     * What is left over is genuinely unreachable: customs offices, the
+     * PLEX vault, and structures nobody linked here has docking access to.
+     * ESI can't name those either, so they fall back to a label rather
+     * than a bare id.
+     *
+     * @param  array  $locationIds
+     * @return array<string, array{name: string, type_id: int|null}>
+     */
+    private function locationNames(array $locationIds, string $bucket): array
+    {
+        $ids = collect($locationIds)->map(fn($id) => (string) $id)->unique();
+
+        if ($ids->isEmpty()) {
+            return [];
+        }
+
+        $structures = DB::table('universe_structures')
+            ->whereIn('structure_id', $ids)
+            ->get(['structure_id', 'name', 'type_id'])
+            ->keyBy(fn($row) => (string) $row->structure_id);
+
+        $sde = DB::table('mapDenormalize')
+            ->whereIn('itemID', $ids)
+            ->whereNotNull('itemName')
+            ->get(['itemID', 'itemName', 'typeID'])
+            ->keyBy(fn($row) => (string) $row->itemID);
+
+        $stations = DB::table('staStations')
+            ->whereIn('stationID', $ids)
+            ->get(['stationID', 'stationName', 'stationTypeID'])
+            ->keyBy(fn($row) => (string) $row->stationID);
+
+        $fallback = $bucket === self::CUSTOMS_OFFICE ? 'Customs office' : 'Unreachable structure';
+
+        return $ids->mapWithKeys(function ($id) use ($structures, $sde, $stations, $fallback) {
+            if ($structure = $structures->get($id)) {
+                return [$id => ['name' => $structure->name, 'type_id' => (int) $structure->type_id]];
+            }
+            if ($entry = $sde->get($id)) {
+                return [$id => ['name' => $entry->itemName, 'type_id' => (int) $entry->typeID]];
+            }
+            if ($station = $stations->get($id)) {
+                return [$id => ['name' => $station->stationName, 'type_id' => (int) $station->stationTypeID]];
+            }
+
+            return [$id => ['name' => $fallback . ' ' . $id, 'type_id' => null]];
+        })->all();
     }
 
     /** Value of everything nested below an item, at any depth. */

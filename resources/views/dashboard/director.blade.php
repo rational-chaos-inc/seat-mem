@@ -394,6 +394,9 @@
                 return '<li>'
                     + icon(item.type_id)
                     + escapeHtml(item.name)
+                    + (item.given_name
+                        ? ' <span class="text-muted">&laquo;' + escapeHtml(item.given_name) + '&raquo;</span>'
+                        : '')
                     + (item.quantity > 1 ? ' &times;' + item.quantity.toLocaleString() : '')
                     + (item.value > 0
                         ? ' <span class="text-muted small">(' + Math.round(item.value).toLocaleString() + ' ISK)</span>'
@@ -457,7 +460,9 @@
                         return;
                     }
                     body.html(data.locations.map(function (location) {
-                        return '<h6 class="mb-1">Container ' + escapeHtml(location.location_id) + '</h6>'
+                        return '<h6 class="mb-1">'
+                            + (location.location_type_id ? icon(location.location_type_id) : '')
+                            + escapeHtml(location.location_name) + '</h6>'
                             + '<div class="small text-muted mb-1">'
                             + Math.round(location.total_value).toLocaleString() + ' ISK</div>'
                             + renderItems(location.items);
