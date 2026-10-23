@@ -35,6 +35,7 @@ class DirectorController
 
         $setting = MemberEngagementSetting::current();
         $homeRegionIds = $setting->home_regions ?? [];
+        $deploymentRegionIds = $setting->deployment_regions ?? [];
 
         return view('member-engagement::dashboard.director', [
             'rankings' => $rankings,
@@ -42,17 +43,24 @@ class DirectorController
             'netWorth' => $netWorth,
             'netWorthTakenAt' => $this->netWorthService->snapshotTakenAt($month, $isCurrentMonth),
             'minimumHomePresence' => (int) ($setting->minimum_home_presence ?? 80),
-            'homeRegionNames' => empty($homeRegionIds)
-                ? []
-                : DB::table('regions')->whereIn('region_id', $homeRegionIds)->pluck('name')->all(),
+            'homeRegionNames' => $this->regionNames($homeRegionIds),
+            'deploymentRegionNames' => $this->regionNames($deploymentRegionIds),
             'month' => $month,
             'isCurrentMonth' => $isCurrentMonth,
             'availableMonths' => $this->rankingService->availableMonths(),
         ]);
     }
 
+    /** @return string[] */
+    private function regionNames(array $regionIds): array
+    {
+        return empty($regionIds)
+            ? []
+            : DB::table('regions')->whereIn('region_id', $regionIds)->orderBy('name')->pluck('name')->all();
+    }
+
     /**
-     * The assets behind one of an account's non-region slices. Loaded on
+     * The assets behind one of an account's slices. Loaded on
      * demand rather than embedded in every page - small here but it scales
      * with the number of registered characters.
      */
@@ -70,7 +78,8 @@ class DirectorController
             NetWorthService::ASSET_SAFETY,
         ];
 
-        if (!in_array($bucket, $allowed, true)) {
+        // Either one of the named buckets, or a region id.
+        if (!in_array($bucket, $allowed, true) && !ctype_digit($bucket)) {
             abort(404, 'Unknown asset bucket');
         }
 

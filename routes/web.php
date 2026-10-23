@@ -17,15 +17,17 @@ Route::middleware(['web', 'auth', 'verified'])
 
         Route::get('/director/bucket-assets/{characterId}/{bucket}', [DirectorController::class, 'bucketAssets'])
             ->whereNumber('characterId')
-            ->where('bucket', '[a-z_]+')
+            ->where('bucket', '[a-z_0-9]+')
             ->name('director.bucket-assets');
 
         Route::get('/settings', [SettingsController::class, 'index'])
             ->name('settings');
         Route::post('/settings', [SettingsController::class, 'store'])
             ->name('settings.store');
-        Route::post('/settings/home-regions/add', [SettingsController::class, 'addHomeRegion'])
-            ->name('settings.home-regions.add');
-        Route::post('/settings/home-regions/remove', [SettingsController::class, 'removeHomeRegion'])
-            ->name('settings.home-regions.remove');
+        Route::post('/settings/regions/{list}/add', [SettingsController::class, 'addRegion'])
+            ->where('list', 'home|deployment')
+            ->name('settings.regions.add');
+        Route::post('/settings/regions/{list}/remove', [SettingsController::class, 'removeRegion'])
+            ->where('list', 'home|deployment')
+            ->name('settings.regions.remove');
     });

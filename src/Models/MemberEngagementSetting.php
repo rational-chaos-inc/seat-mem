@@ -29,6 +29,7 @@ class MemberEngagementSetting extends Model
         'last_aggregate_at',
         'minimum_home_presence',
         'home_regions',
+        'deployment_regions',
     ];
 
     protected $casts = [
@@ -42,6 +43,7 @@ class MemberEngagementSetting extends Model
         'last_aggregate_at' => 'datetime',
         'minimum_home_presence' => 'integer',
         'home_regions' => 'array',
+        'deployment_regions' => 'array',
     ];
 
     public static function current(): self
@@ -61,6 +63,7 @@ class MemberEngagementSetting extends Model
             'fleet_participation_min_size' => 5,
             'minimum_home_presence' => 80,
             'home_regions' => [],
+            'deployment_regions' => [],
         ]);
     }
 }

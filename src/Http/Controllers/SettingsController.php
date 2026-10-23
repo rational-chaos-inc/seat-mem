@@ -15,13 +15,18 @@ class SettingsController
 
         $setting = MemberEngagementSetting::current();
         $homeRegionIds = array_map('intval', $setting->home_regions ?? []);
+        $deploymentRegionIds = array_map('intval', $setting->deployment_regions ?? []);
 
         $regions = DB::table('regions')->orderBy('name')->get(['region_id', 'name']);
+        $claimed = array_merge($homeRegionIds, $deploymentRegionIds);
 
         return view('member-engagement::settings.index', [
             'setting' => $setting,
             'homeRegions' => $regions->whereIn('region_id', $homeRegionIds)->values(),
-            'availableRegions' => $regions->whereNotIn('region_id', $homeRegionIds)->values(),
+            'deploymentRegions' => $regions->whereIn('region_id', $deploymentRegionIds)->values(),
+            // A region can only be in one list, so the picker offers
+            // whatever neither list has claimed.
+            'availableRegions' => $regions->whereNotIn('region_id', $claimed)->values(),
         ]);
     }
 
@@ -66,41 +71,66 @@ class SettingsController
             ->with('success', 'Settings saved successfully!');
     }
 
-    public function addHomeRegion(Request $request)
+    public function addRegion(Request $request, string $list)
     {
         $this->authorize();
+
+        $column = $this->regionColumn($list);
 
         $validated = $request->validate([
             'region_id' => 'required|integer|exists:regions,region_id',
         ]);
 
         $setting = MemberEngagementSetting::current();
-        $regions = array_map('intval', $setting->home_regions ?? []);
-        $regions[] = (int) $validated['region_id'];
+        $regionId = (int) $validated['region_id'];
 
-        $setting->update(['home_regions' => array_values(array_unique($regions))]);
+        // A region belongs to one list or the other, never both - adding it
+        // to one takes it out of the other.
+        $lists = [
+            'home_regions' => $this->without($setting->home_regions, $regionId),
+            'deployment_regions' => $this->without($setting->deployment_regions, $regionId),
+        ];
+        $lists[$column][] = $regionId;
+
+        $setting->update($lists);
 
         return redirect()->route('member-engagement.settings')
-            ->with('success', 'Home region added.');
+            ->with('success', 'Region added.');
     }
 
-    public function removeHomeRegion(Request $request)
+    public function removeRegion(Request $request, string $list)
     {
         $this->authorize();
+
+        $column = $this->regionColumn($list);
 
         $validated = $request->validate([
             'region_id' => 'required|integer',
         ]);
 
         $setting = MemberEngagementSetting::current();
-        $regions = array_map('intval', $setting->home_regions ?? []);
 
         $setting->update([
-            'home_regions' => array_values(array_diff($regions, [(int) $validated['region_id']])),
+            $column => $this->without($setting->{$column}, (int) $validated['region_id']),
         ]);
 
         return redirect()->route('member-engagement.settings')
-            ->with('success', 'Home region removed.');
+            ->with('success', 'Region removed.');
+    }
+
+    private function regionColumn(string $list): string
+    {
+        return match ($list) {
+            'home' => 'home_regions',
+            'deployment' => 'deployment_regions',
+            default => abort(404, 'Unknown region list'),
+        };
+    }
+
+    /** @return int[] */
+    private function without(?array $regions, int $regionId): array
+    {
+        return array_values(array_diff(array_map('intval', $regions ?? []), [$regionId]));
     }
 
     private function authorize(): void

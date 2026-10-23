@@ -188,11 +188,12 @@ class NetWorthService
 
         $setting = MemberEngagementSetting::current();
         $homeRegions = array_map('strval', $setting->home_regions ?? []);
+        $deploymentRegions = array_map('strval', $setting->deployment_regions ?? []);
         $threshold = (int) ($setting->minimum_home_presence ?? 80);
 
         $byCharacter = $rows->keyBy('character_id');
 
-        $accounts = collect($groups)->map(function ($characterIds, $mainId) use ($byCharacter, $previous, $homeRegions, $threshold) {
+        $accounts = collect($groups)->map(function ($characterIds, $mainId) use ($byCharacter, $previous, $homeRegions, $deploymentRegions, $threshold) {
             $assetValue = 0.0;
             $walletBalance = 0.0;
             $plexValue = 0.0;
@@ -222,7 +223,15 @@ class NetWorthService
                 self::CUSTOMS_OFFICE => 0,
             ]));
             $atHome = array_sum(array_intersect_key($regions, array_flip($homeRegions)));
-            $homePresence = $placed > 0 ? ($atHome / $placed) * 100 : null;
+            $deployed = array_sum(array_intersect_key($regions, array_flip($deploymentRegions)));
+
+            // Deployed counts the same as home: a member who moved their
+            // ships to the deployment is where they're supposed to be. The
+            // minimum is measured against the two together.
+            $percent = fn(float $value) => $placed > 0 ? ($value / $placed) * 100 : null;
+            $homePresence = $percent($atHome);
+            $deployedPresence = $percent($deployed);
+            $combinedPresence = $percent($atHome + $deployed);
 
             $netWorth = $assetValue + $walletBalance + $plexValue;
             $previousNetWorth = $previous[$mainId] ?? null;
@@ -242,10 +251,13 @@ class NetWorthService
                 'net_worth' => $netWorth,
                 'regions' => $regions,
                 'value_at_home' => $atHome,
+                'value_deployed' => $deployed,
                 'value_placed' => $placed,
-                'value_elsewhere' => $placed - $atHome,
+                'value_elsewhere' => $placed - $atHome - $deployed,
                 'home_presence' => $homePresence,
-                'below_threshold' => $homePresence !== null && $homePresence < $threshold,
+                'deployed_presence' => $deployedPresence,
+                'combined_presence' => $combinedPresence,
+                'below_threshold' => $combinedPresence !== null && $combinedPresence < $threshold,
                 'change_percent' => $changePercent,
             ];
         })->filter(fn($account) => $account->net_worth > 0)->values();
@@ -255,7 +267,7 @@ class NetWorthService
         }
 
         $this->entityResolution->attachDisplayNames($accounts);
-        $this->attachRegionBreakdown($accounts);
+        $this->attachRegionBreakdown($accounts, array_merge($homeRegions, $deploymentRegions));
 
         return $accounts->sortByDesc('net_worth')->values()->all();
     }
@@ -266,8 +278,10 @@ class NetWorthService
      * Percentages are of everything the account holds, unresolved included,
      * so the slices total 100%.
      */
-    private function attachRegionBreakdown(Collection $accounts): void
+    private function attachRegionBreakdown(Collection $accounts, array $settledRegions = []): void
     {
+        $settled = array_flip(array_map('strval', $settledRegions));
+
         $regionIds = $accounts
             ->flatMap(fn($account) => array_keys($account->regions))
             ->reject(fn($id) => $id === self::UNKNOWN_REGION)
@@ -301,7 +315,12 @@ class NetWorthService
             $account->region_breakdown = $breakdown->all();
 
             $slices = $breakdown->take(self::PIE_SLICES)->values()
-                ->map(fn($slice, $index) => $slice + ['colour' => self::SLICE_COLOURS[$index]])
+                ->map(fn($slice, $index) => $slice + [
+                    'colour' => self::SLICE_COLOURS[$index],
+                    // Home and deployment regions are where the assets are
+                    // meant to be, so there's nothing to investigate.
+                    'drillable' => !isset($settled[(string) $slice['region_id']]),
+                ])
                 ->all();
 
             $tail = $breakdown->slice(self::PIE_SLICES);
@@ -312,6 +331,7 @@ class NetWorthService
                     'value' => (float) $tail->sum('value'),
                     'percent' => (float) $tail->sum('percent'),
                     'colour' => self::OTHER_COLOUR,
+                    'drillable' => true,
                 ];
             }
 
@@ -329,6 +349,7 @@ class NetWorthService
                     'value' => $value,
                     'percent' => $total > 0 ? ($value / $total) * 100 : 0,
                     'colour' => $special['colour'],
+                    'drillable' => true,
                 ];
             }
 
@@ -539,7 +560,12 @@ class NetWorthService
 
         $rows = collect(DB::select($sql));
 
-        if ($bucket === self::ASSET_SAFETY) {
+        if (ctype_digit($bucket)) {
+            // A single region: everything resolved there that isn't in
+            // asset safety, which is reported on its own.
+            $wanted = $rows->filter(fn($row) => (int) $row->in_asset_safety === 0
+                && (string) $row->region_id === $bucket);
+        } elseif ($bucket === self::ASSET_SAFETY) {
             $wanted = $rows->filter(fn($row) => (int) $row->in_asset_safety === 1);
         } else {
             // Customs offices are the unplaceable locations holding nothing

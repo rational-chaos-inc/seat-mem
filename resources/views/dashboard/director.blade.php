@@ -144,7 +144,7 @@
                                 <th class="text-right">Net Worth</th>
                                 <th class="text-right">Assets</th>
                                 <th class="text-right">ISK and PLEX</th>
-                                <th class="text-right">Home Presence</th>
+                                <th class="text-right">Home + Deployed</th>
                                 <th class="text-right">Change vs Last Month</th>
                             </tr>
                         </thead>
@@ -165,12 +165,12 @@
                                         {{ number_format($row->currency_value) }}
                                     </td>
                                     <td class="text-right">
-                                        @if($row->home_presence === null)
+                                        @if($row->combined_presence === null)
                                             <span class="text-muted">-</span>
                                         @elseif($row->below_threshold)
-                                            <span class="badge badge-danger">{{ number_format($row->home_presence, 1) }}%</span>
+                                            <span class="badge badge-danger">{{ number_format($row->combined_presence, 1) }}%</span>
                                         @else
-                                            {{ number_format($row->home_presence, 1) }}%
+                                            {{ number_format($row->combined_presence, 1) }}%
                                         @endif
                                     </td>
                                     <td class="text-right">
@@ -197,28 +197,36 @@
 
         <div class="card">
             <div class="card-header">
-                <h4 class="card-title">Home Presence</h4>
+                <h4 class="card-title">Home + Deployed Presence</h4>
             </div>
             <div class="card-body">
                 <p class="text-muted">
-                    Share of each account's asset value sitting in
+                    Home:
                     @if(empty($homeRegionNames))
-                        <strong>no regions yet</strong> - set your home regions on the Settings page.
+                        <strong>none set</strong>
                     @else
-                        <strong>{{ implode(', ', $homeRegionNames) }}</strong>.
+                        <strong>{{ implode(', ', $homeRegionNames) }}</strong>
                     @endif
-                    Anything below {{ $minimumHomePresence }}% is highlighted. Least present accounts
-                    first - select a member to see where their assets actually sit.
+                    &middot; Deployed:
+                    @if(empty($deploymentRegionNames))
+                        <strong>none set</strong>
+                    @else
+                        <strong>{{ implode(', ', $deploymentRegionNames) }}</strong>
+                    @endif
+                    <br>
+                    The two together are measured against the {{ $minimumHomePresence }}% minimum;
+                    anything below is highlighted. Least present accounts first - select a member
+                    to see where their assets actually sit.
                 </p>
 
                 @php
                     $placedAccounts = collect($netWorth)
-                        ->filter(fn($r) => $r->home_presence !== null)
-                        ->sortBy('home_presence')
+                        ->filter(fn($r) => $r->combined_presence !== null)
+                        ->sortBy('combined_presence')
                         ->values();
                 @endphp
 
-                @if($placedAccounts->isEmpty() || empty($homeRegionNames))
+                @if($placedAccounts->isEmpty() || (empty($homeRegionNames) && empty($deploymentRegionNames)))
                     <div class="alert alert-info">Nothing to compare yet</div>
                 @else
                     <div class="row">
@@ -228,8 +236,10 @@
                                     <tr>
                                         <th>#</th>
                                         <th>Member</th>
-                                        <th class="text-right">Home Presence</th>
-                                        <th class="text-right">Value at Home</th>
+                                        <th class="text-right">Home %</th>
+                                        <th class="text-right">Home Value</th>
+                                        <th class="text-right">Deployed %</th>
+                                        <th class="text-right">Deployed Value</th>
                                         <th class="text-right">Value Elsewhere</th>
                                     </tr>
                                 </thead>
@@ -239,7 +249,7 @@
                                             style="cursor: pointer;"
                                             data-member="{{ $row->display_name }}"
                                             data-unresolved="{{ (int) $row->unresolved_value }}"
-                                            data-home="{{ number_format($row->home_presence, 1) }}"
+                                            data-home="{{ number_format($row->combined_presence, 1) }}"
                                             data-character="{{ $row->character_id }}"
                                             data-slices="{{ json_encode($row->chart_slices) }}"
                                             data-other-regions="{{ json_encode(array_slice($row->region_breakdown, 3)) }}">
@@ -258,6 +268,8 @@
                                                 @endif
                                             </td>
                                             <td class="text-right">{{ number_format($row->value_at_home) }}</td>
+                                            <td class="text-right">{{ number_format($row->deployed_presence, 1) }}%</td>
+                                            <td class="text-right">{{ number_format($row->value_deployed) }}</td>
                                             <td class="text-right">{{ number_format($row->value_elsewhere) }}</td>
                                         </tr>
                                     @endforeach
@@ -361,7 +373,8 @@
         var chart = null;
         var selected = null;
         var bucketUrl = @json(route('member-engagement.director.bucket-assets', ['characterId' => 0, 'bucket' => 'BUCKET']));
-        var drillable = ['unknown', 'customs_office', 'asset_safety', 'other'];
+        // Which slices can be opened is decided server-side: anything that
+        // isn't a home or deployment region.
 
         function escapeHtml(text) {
             return $('<div>').text(text).html();
@@ -431,7 +444,10 @@
             $('#me-unknown-modal-title').text(
                 $.trim($('#me-region-legend tr[data-bucket="' + bucket + '"] td:eq(1)').text()) + ' - ' + selected.member
             );
-            $('#me-unknown-intro').text(bucketIntro[bucket] || '');
+            $('#me-unknown-intro').text(
+                bucketIntro[bucket] || 'Assets held in this region, grouped by the station or '
+                    + 'structure holding them. It is neither a home nor a deployment region.'
+            );
             $('#me-unknown-modal').modal('show');
 
             $.getJSON(bucketUrl.replace('BUCKET', bucket).replace('/0/', '/' + selected.characterId + '/'))
@@ -471,8 +487,8 @@
             );
 
             $('#me-region-legend').html(slices.map(function (slice) {
-                var bucket = slice.region_id === 'other' ? 'other' : slice.region_id;
-                var canDrill = drillable.indexOf(String(bucket)) !== -1;
+                var bucket = String(slice.region_id);
+                var canDrill = slice.drillable === true;
 
                 return '<tr data-bucket="' + bucket + '"'
                     + (canDrill ? ' class="me-drill" style="cursor:pointer;"' : '') + '>'
@@ -506,9 +522,9 @@
                         if (!elements.length) {
                             return;
                         }
-                        var bucket = String(slices[elements[0]._index].region_id);
-                        if (drillable.indexOf(bucket) !== -1) {
-                            openBucket(bucket);
+                        var slice = slices[elements[0]._index];
+                        if (slice.drillable === true) {
+                            openBucket(String(slice.region_id));
                         }
                     },
                     // Identity comes from the table legend beside the chart,

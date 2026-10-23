@@ -236,17 +236,17 @@
                     <table class="table table-sm">
                         <thead>
                             <tr>
-                                <th>Home Presence</th>
+                                <th>Presence</th>
                                 <th style="width: 160px;">Minimum (%)</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td>
-                                    <strong>Minimum Home Presence</strong>
+                                    <strong>Minimum Home + Deployed Presence</strong>
                                     <div class="small text-muted">
                                         Accounts with less than this share of their asset value in a
-                                        home region are highlighted on Corporation View
+                                        home or deployment region are highlighted on Corporation View
                                     </div>
                                 </td>
                                 <td>
@@ -267,50 +267,24 @@
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Home Regions</h3>
-                <div class="small text-muted">
-                    Assets held in these regions count towards an account's home presence.
-                </div>
-            </div>
-            <div class="card-body">
-                @if($homeRegions->isEmpty())
-                    <div class="alert alert-info">
-                        No home regions set yet - home presence can't be calculated until at least one is added.
-                    </div>
-                @else
-                    <table class="table table-sm table-striped" style="max-width: 420px;">
-                        <tbody>
-                            @foreach($homeRegions as $region)
-                                <tr>
-                                    <td>{{ $region->name }}</td>
-                                    <td class="text-right" style="width: 60px;">
-                                        <form action="{{ route('member-engagement.settings.home-regions.remove') }}" method="POST">
-                                            @csrf
-                                            <input type="hidden" name="region_id" value="{{ $region->region_id }}">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger"
-                                                    title="Remove {{ $region->name }}">&times;</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                @endif
+        @include('member-engagement::settings.partials.region-list', [
+            'list' => 'home',
+            'title' => 'Home Regions',
+            'blurb' => 'Assets held here count towards an account's presence.',
+            'regions' => $homeRegions,
+            'available' => $availableRegions,
+            'emptyNote' => 'No home regions set yet - presence can't be calculated until at least one is added.',
+        ])
 
-                <form action="{{ route('member-engagement.settings.home-regions.add') }}" method="POST" class="form-inline">
-                    @csrf
-                    <select name="region_id" class="form-control form-control-sm mr-2" required>
-                        <option value="">Add a region...</option>
-                        @foreach($availableRegions as $region)
-                            <option value="{{ $region->region_id }}">{{ $region->name }}</option>
-                        @endforeach
-                    </select>
-                    <button type="submit" class="btn btn-sm btn-primary">Add</button>
-                </form>
-            </div>
-        </div>
+        @include('member-engagement::settings.partials.region-list', [
+            'list' => 'deployment',
+            'title' => 'Deployment Regions',
+            'blurb' => 'Where the corporation is currently deployed. Assets here count towards presence too.',
+            'regions' => $deploymentRegions,
+            'available' => $availableRegions,
+            'emptyNote' => 'No deployment regions set - add one when the corporation deploys.',
+        ])
+
     </div>
 </div>
 @endsection
