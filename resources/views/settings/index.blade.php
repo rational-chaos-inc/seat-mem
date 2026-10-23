@@ -270,10 +270,10 @@
         @include('member-engagement::settings.partials.region-list', [
             'list' => 'home',
             'title' => 'Home Regions',
-            'blurb' => 'Assets held here count towards an account's presence.',
+            'blurb' => 'Assets held here count towards member presence.',
             'regions' => $homeRegions,
             'available' => $availableRegions,
-            'emptyNote' => 'No home regions set yet - presence can't be calculated until at least one is added.',
+            'emptyNote' => 'No home regions set yet - presence cannot be calculated until at least one is added.',
         ])
 
         @include('member-engagement::settings.partials.region-list', [
