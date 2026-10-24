@@ -162,6 +162,15 @@ return [
   its activity history will take a few hours to fully resolve. Run
   `php artisan member-engagement:resolve-names --limit=10000` manually for a
   faster one-time backfill.
+- **Scoped to the primary corporation**: accounts only appear if at least
+  one of their linked characters is currently in the corporation Corp
+  Wallet Manager is pointed at (`selected_corporation_id`). One character
+  is enough - alts in a holding corp don't disqualify a main. Note the
+  filter is per account, not per character: a qualifying account's figures
+  still include every linked character, wherever they are. Nothing is
+  filtered if Corp Wallet Manager isn't installed or hasn't been pointed
+  at a corporation. My Activities is not filtered, so a member can always
+  see their own figures.
 - **Scoped to registered SeAT members**: EVE's ESI never reveals which
   characters share an account — the only linkage anyone can know is for
   characters whose owner has personally authenticated them into SeAT (main +
