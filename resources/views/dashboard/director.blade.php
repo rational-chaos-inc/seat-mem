@@ -33,9 +33,12 @@
                 </div>
 
                 <p class="text-muted mt-3 mb-0">
-                    Scoped to registered SeAT members only - each entry is a main character with
-                    any linked alts' activity consolidated under it. Characters whose owner hasn't
-                    registered with SeAT aren't included here.
+                    Scoped to registered SeAT members
+                    @if($primaryCorporationName)
+                        with at least one character in <strong>{{ $primaryCorporationName }}</strong>
+                    @endif
+                    - each entry is a main character with any linked alts' activity consolidated
+                    under it. Characters whose owner hasn't registered with SeAT aren't included.
                 </p>
             </div>
         </div>

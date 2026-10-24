@@ -37,7 +37,12 @@ class DirectorController
         $homeRegionIds = $setting->home_regions ?? [];
         $deploymentRegionIds = $setting->deployment_regions ?? [];
 
+        $primaryCorporationId = $this->consolidation->primaryCorporationId();
+
         return view('member-engagement::dashboard.director', [
+            'primaryCorporationName' => $primaryCorporationId === null
+                ? null
+                : DB::table('corporation_infos')->where('corporation_id', $primaryCorporationId)->value('name'),
             'rankings' => $rankings,
             'heartbeat' => $heartbeat,
             'netWorth' => $netWorth,

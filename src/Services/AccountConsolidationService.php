@@ -3,6 +3,7 @@
 namespace RCI\MemberEngagement\Services;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Resolves each character to the "main character" of the EVE/SeAT account
@@ -54,6 +55,13 @@ class AccountConsolidationService
             if (isset($mainCharacterByUser[$userId])) {
                 $map[$characterId] = (int) $mainCharacterByUser[$userId];
             }
+        }
+
+        // Same primary-corporation scope the account listings use, so a
+        // leaderboard can't show someone the Heartbeat list has dropped.
+        if ($this->primaryCorporationId() !== null) {
+            $eligible = $this->allAccountGroups();
+            $map = array_filter($map, fn($mainId) => isset($eligible[$mainId]));
         }
 
         return $map;
@@ -146,6 +154,59 @@ class AccountConsolidationService
             }
         }
 
-        return $groups;
+        return $this->inPrimaryCorporation($groups);
+    }
+
+    /**
+     * The corporation this install is actually about, as picked in Corp
+     * Wallet Manager. Null when that module isn't installed or hasn't been
+     * pointed at a corporation yet.
+     */
+    public function primaryCorporationId(): ?int
+    {
+        if (!Schema::hasTable('corpwalletmanager_settings')) {
+            return null;
+        }
+
+        $value = DB::table('corpwalletmanager_settings')
+            ->where('key', 'selected_corporation_id')
+            ->value('value');
+
+        return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
+    }
+
+    /**
+     * Drops accounts with no character currently in the primary
+     * corporation - an alliance-wide SeAT otherwise fills the dashboards
+     * with people from corporations this install doesn't speak for.
+     *
+     * One character is enough: alts parked in a holding corp shouldn't
+     * disqualify a main who is right where they should be. With no primary
+     * corporation configured, nothing is filtered.
+     *
+     * @param  array<int, int[]>  $groups
+     * @return array<int, int[]>
+     */
+    private function inPrimaryCorporation(array $groups): array
+    {
+        $primary = $this->primaryCorporationId();
+
+        if ($primary === null || empty($groups)) {
+            return $groups;
+        }
+
+        $corpByCharacter = DB::table('character_affiliations')
+            ->whereIn('character_id', array_merge(...array_values($groups)))
+            ->pluck('corporation_id', 'character_id');
+
+        return array_filter($groups, function (array $characterIds) use ($corpByCharacter, $primary) {
+            foreach ($characterIds as $characterId) {
+                if ((int) ($corpByCharacter[$characterId] ?? 0) === $primary) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
     }
 }
