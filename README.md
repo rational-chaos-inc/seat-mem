@@ -31,8 +31,8 @@ on a Corporation View, plus each member's own figures on My Activities.
   last logged in if not today — surfaces inactive members even if they have
   zero activity to otherwise show up in
 - **Net Worth** — a daily snapshot of each account's asset value (priced
-  against SeAT's market data, excluding blueprint copies) plus ISK and PLEX,
-  consolidated across main + alts, with month-on-month change. PLEX is
+  against SeAT's market data, excluding blueprint copies) plus their personal
+  wallet, consolidated across main + alts, with month-on-month change. PLEX is
   recorded but excluded from net worth - it lives in the account-wide vault,
   so it is neither the wallet nor a hangar asset (tracking it is what keeps
   it out of assets, where it would otherwise show as an unknown location). Assets are resolved to the region they actually sit in, which
