@@ -149,7 +149,6 @@
                                 <th class="text-right">Net Worth</th>
                                 <th class="text-right">Assets</th>
                                 <th class="text-right">ISK</th>
-                                <th class="text-right">PLEX</th>
                                 <th class="text-right">Home + Deployed</th>
                                 <th class="text-right">Change vs Last Month</th>
                             </tr>
@@ -167,7 +166,6 @@
                                     <td class="text-right">{{ number_format($row->net_worth) }}</td>
                                     <td class="text-right">{{ number_format($row->asset_value) }}</td>
                                     <td class="text-right">{{ number_format($row->wallet_balance) }}</td>
-                                    <td class="text-right">{{ number_format($row->plex_value) }}</td>
                                     <td class="text-right">
                                         @if($row->combined_presence === null)
                                             <span class="text-muted">-</span>
@@ -192,9 +190,9 @@
                     </table>
                     <p class="small text-muted mb-0">
                         Assets are priced against SeAT's market data, excluding blueprint copies.
-                        ISK is the personal wallet only, not corporation wallets. PLEX lives in the
-                        account-wide vault rather than a hangar, so it is counted separately from
-                        both - it is still part of net worth.
+                        ISK is the personal wallet only, not corporation wallets. PLEX sits in the
+                        account-wide vault rather than the wallet or a hangar, so it is excluded
+                        from net worth entirely.
                     </p>
                 @endif
             </div>

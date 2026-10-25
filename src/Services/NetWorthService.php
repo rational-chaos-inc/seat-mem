@@ -233,7 +233,10 @@ class NetWorthService
             $deployedPresence = $percent($deployed);
             $combinedPresence = $percent($atHome + $deployed);
 
-            $netWorth = $assetValue + $walletBalance + $plexValue;
+            // PLEX is a separate vault, not the wallet and not a hangar
+            // asset, so it is tracked but deliberately left out of net
+            // worth.
+            $netWorth = $assetValue + $walletBalance;
             $previousNetWorth = $previous[$mainId] ?? null;
             $changePercent = ($previousNetWorth !== null && $previousNetWorth > 0)
                 ? (($netWorth - $previousNetWorth) / $previousNetWorth) * 100
@@ -247,7 +250,6 @@ class NetWorthService
                 'asset_value' => $assetValue,
                 'wallet_balance' => $walletBalance,
                 'plex_value' => $plexValue,
-                'currency_value' => $walletBalance + $plexValue,
                 'net_worth' => $netWorth,
                 'regions' => $regions,
                 'value_at_home' => $atHome,
@@ -433,8 +435,7 @@ class NetWorthService
 
             $totals[$mainId] = ($totals[$mainId] ?? 0)
                 + (float) $row->asset_value
-                + (float) $row->wallet_balance
-                + (float) $row->plex_value;
+                + (float) $row->wallet_balance;
         }
 
         return $totals;
