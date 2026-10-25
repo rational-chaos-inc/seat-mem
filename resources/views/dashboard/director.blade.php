@@ -148,7 +148,8 @@
                                 <th>Member</th>
                                 <th class="text-right">Net Worth</th>
                                 <th class="text-right">Assets</th>
-                                <th class="text-right">ISK and PLEX</th>
+                                <th class="text-right">ISK</th>
+                                <th class="text-right">PLEX</th>
                                 <th class="text-right">Home + Deployed</th>
                                 <th class="text-right">Change vs Last Month</th>
                             </tr>
@@ -165,10 +166,8 @@
                                     </td>
                                     <td class="text-right">{{ number_format($row->net_worth) }}</td>
                                     <td class="text-right">{{ number_format($row->asset_value) }}</td>
-                                    <td class="text-right"
-                                        title="Wallet {{ number_format($row->wallet_balance) }} ISK + PLEX {{ number_format($row->plex_value) }} ISK">
-                                        {{ number_format($row->currency_value) }}
-                                    </td>
+                                    <td class="text-right">{{ number_format($row->wallet_balance) }}</td>
+                                    <td class="text-right">{{ number_format($row->plex_value) }}</td>
                                     <td class="text-right">
                                         @if($row->combined_presence === null)
                                             <span class="text-muted">-</span>
@@ -193,8 +192,9 @@
                     </table>
                     <p class="small text-muted mb-0">
                         Assets are priced against SeAT's market data, excluding blueprint copies.
-                        ISK and PLEX covers personal wallets and vaulted PLEX at market value -
-                        not corporation wallets. Hover for the split.
+                        ISK is the personal wallet only, not corporation wallets. PLEX lives in the
+                        account-wide vault rather than a hangar, so it is counted separately from
+                        both - it is still part of net worth.
                     </p>
                 @endif
             </div>
