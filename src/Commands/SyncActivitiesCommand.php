@@ -4,6 +4,7 @@ namespace RCI\MemberEngagement\Commands;
 
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use RCI\MemberEngagement\Models\MemberEngagementSetting;
 use RCI\MemberEngagement\Services\DataCollectionService;
 
@@ -59,14 +60,44 @@ class SyncActivitiesCommand extends Command
         }
 
         $missedDays = $lastRun->copy()->startOfDay()->diffInDays(Carbon::now()->startOfDay());
+        $lateDays = $this->lateArrivalDays($lastRun);
 
-        if ($missedDays <= 1) {
+        if ($missedDays <= 1 && $lateDays <= self::DEFAULT_DAYS) {
             return self::DEFAULT_DAYS;
         }
 
-        $days = min($missedDays + 1, self::MAX_DAYS);
-        $this->warn("Last successful sync was {$missedDays} day(s) ago - catching up over {$days} days.");
+        $days = min(max($missedDays + 1, $lateDays, self::DEFAULT_DAYS), self::MAX_DAYS);
+
+        if ($lateDays > $missedDays + 1) {
+            $this->warn("SeAT imported data backdated {$lateDays} day(s) - widening the window to cover it.");
+        } else {
+            $this->warn("Last successful sync was {$missedDays} day(s) ago - catching up over {$days} days.");
+        }
 
         return $days;
+    }
+
+    /**
+     * How far back the data SeAT has imported since our last run actually
+     * reaches.
+     *
+     * The collectors filter on each source's own timestamp, so a killmail
+     * that arrives today carrying last month's timestamp falls outside a
+     * two-day window and would never be collected. That is not
+     * hypothetical: unblocking a stalled killmail sync drops weeks of
+     * backdated killmails in at once.
+     */
+    private function lateArrivalDays(Carbon $lastRun): int
+    {
+        $oldest = collect([
+            DB::table('killmail_details')->where('created_at', '>=', $lastRun)->min('killmail_time'),
+            DB::table('corporation_wallet_journals')->where('created_at', '>=', $lastRun)->min('date'),
+        ])->filter()->map(fn($timestamp) => Carbon::parse($timestamp))->min();
+
+        if (!$oldest) {
+            return 0;
+        }
+
+        return $oldest->startOfDay()->diffInDays(Carbon::now()->startOfDay()) + 1;
     }
 }

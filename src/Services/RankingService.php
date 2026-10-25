@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RCI\MemberEngagement\Models\DailyMemberStat;
+use RCI\MemberEngagement\Models\MemberEngagementSetting;
 use RCI\MemberEngagement\Models\MonthlyMemberStat;
 
 /**
@@ -50,6 +51,7 @@ class RankingService
         }
 
         $consolidated = $this->consolidate($rows, $groupMap);
+        $this->attachFleetParticipation($consolidated, $month, $isCurrentMonth, $groupMap);
 
         $this->entityResolution->attachDisplayNames($consolidated);
 
@@ -72,7 +74,7 @@ class RankingService
         'isk_destroyed' => 'isk_destroyed',
         'losses' => 'pvp_losses',
         'isk_lost' => 'isk_lost',
-        'fleet' => 'fleet_participation',
+        'fleet' => 'fleet_count',
     ];
 
     private function emptyRankings(): array
@@ -91,6 +93,9 @@ class RankingService
         $rows = $this->rowsForMonth($month, $isCurrentMonth)
             ->filter(fn($r) => in_array((int) $r->character_id, $characterIds, true));
 
+        $fleet = $this->fleetBuckets($characterIds, $month, $isCurrentMonth);
+        $buckets = collect($fleet)->flatten()->unique();
+
         return (object) [
             'pve_bounty_amount' => (float) $rows->sum('pve_bounty_amount'),
             'industry_tax_amount' => (float) $rows->sum('industry_tax_amount'),
@@ -99,7 +104,10 @@ class RankingService
             'pvp_losses' => (int) $rows->sum('pvp_losses'),
             'isk_destroyed' => (float) $rows->sum('isk_destroyed'),
             'isk_lost' => (float) $rows->sum('isk_lost'),
-            'fleet_participation' => (int) $rows->sum('fleet_participation'),
+            // Fleets the account was in, counting a fleet once however
+            // many of its characters were there; instances counts them all.
+            'fleet_count' => $buckets->count(),
+            'fleet_instances' => collect($fleet)->sum(fn($hours) => count($hours)),
         ];
     }
 
@@ -178,6 +186,75 @@ class RankingService
             ['days_logged_in', 'asc'],
             fn($a, $b) => ($a->last_login_date?->timestamp ?? 0) <=> ($b->last_login_date?->timestamp ?? 0),
         ])->values()->all();
+    }
+
+    /**
+     * Fleet participation, counted per account rather than per character.
+     *
+     * Five of an account's characters in the same fleet is one fleet, not
+     * five - so the ranked figure counts distinct hour buckets across the
+     * whole account. "Instances" keeps the old per-character total beside
+     * it, which is what shows how many hulls they actually brought.
+     *
+     * @param  array<int, int>  $groupMap character_id => main character_id
+     */
+    private function attachFleetParticipation(
+        Collection $accounts,
+        Carbon $month,
+        bool $isCurrentMonth,
+        array $groupMap
+    ): void {
+        $hoursByCharacter = $this->fleetBuckets(array_keys($groupMap), $month, $isCurrentMonth);
+
+        $perAccount = [];
+        foreach ($hoursByCharacter as $characterId => $hours) {
+            $mainId = $groupMap[$characterId] ?? null;
+            if ($mainId === null) {
+                continue;
+            }
+
+            $perAccount[$mainId]['hours'] = array_merge($perAccount[$mainId]['hours'] ?? [], $hours);
+            $perAccount[$mainId]['instances'] = ($perAccount[$mainId]['instances'] ?? 0) + count($hours);
+        }
+
+        foreach ($accounts as $account) {
+            $entry = $perAccount[$account->character_id] ?? null;
+
+            $account->fleet_count = $entry ? count(array_unique($entry['hours'])) : 0;
+            $account->fleet_instances = $entry ? $entry['instances'] : 0;
+        }
+    }
+
+    /**
+     * The distinct hours in which each character was on a killmail big
+     * enough to count as a fleet. Read from the activity rows rather than
+     * the daily totals, because a summed count can't be deduplicated.
+     *
+     * @param  int[]  $characterIds
+     * @return array<int, string[]> character_id => hour buckets
+     */
+    private function fleetBuckets(array $characterIds, Carbon $month, bool $isCurrentMonth): array
+    {
+        if (empty($characterIds)) {
+            return [];
+        }
+
+        $minSize = (int) (MemberEngagementSetting::current()->fleet_participation_min_size ?? 5);
+        $start = $month->copy()->startOfMonth();
+        $end = $isCurrentMonth ? Carbon::now()->endOfDay() : $month->copy()->endOfMonth();
+
+        return DB::table('member_engagement_activities')
+            ->where('activity_type', 'pvp_kill')
+            ->whereBetween('activity_timestamp', [$start, $end])
+            ->whereIn('character_id', $characterIds)
+            ->whereRaw("CAST(JSON_EXTRACT(metadata, '$.attacker_count') AS UNSIGNED) >= ?", [$minSize])
+            ->selectRaw("character_id, DATE_FORMAT(activity_timestamp, '%Y-%m-%d %H') AS hour_bucket")
+            ->groupBy('character_id', 'hour_bucket')
+            ->get()
+            ->groupBy('character_id')
+            ->map(fn($rows) => $rows->pluck('hour_bucket')->all())
+            ->mapWithKeys(fn($hours, $characterId) => [(int) $characterId => $hours])
+            ->all();
     }
 
     /**

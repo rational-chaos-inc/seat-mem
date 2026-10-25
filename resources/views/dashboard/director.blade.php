@@ -96,10 +96,12 @@
                     ])
                     @include('member-engagement::dashboard.partials.leaderboard', [
                         'rows' => $rankings['fleet'],
-                        'field' => 'fleet_participation',
+                        'field' => 'fleet_count',
                         'heading' => 'Top Fleet Participation',
-                        'subtitle' => 'Configured minimum fleet size, 1/hour max',
-                        'valueLabel' => 'Instances',
+                        'subtitle' => 'A fleet counts once per account however many characters were in it',
+                        'valueLabel' => 'Fleets',
+                        'secondField' => 'fleet_instances',
+                        'secondLabel' => 'Instances',
                     ])
                     @include('member-engagement::dashboard.partials.leaderboard', [
                         'rows' => $rankings['losses'],

@@ -85,8 +85,9 @@
                         <div class="col-md-4">
                             <div class="card bg-light">
                                 <div class="card-body text-center">
-                                    <h6 class="card-title text-muted">Fleet Participation</h6>
-                                    <h3 class="mb-0">{{ $stats->fleet_participation }}</h3>
+                                    <h6 class="card-title text-muted">Fleets</h6>
+                                    <h3 class="mb-0">{{ $stats->fleet_count }}</h3>
+                                    <div class="small text-muted">{{ $stats->fleet_instances }} instances</div>
                                 </div>
                             </div>
                         </div>

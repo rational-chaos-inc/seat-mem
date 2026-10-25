@@ -7,6 +7,8 @@
     $subtitle   small muted line under the heading
     $valueLabel header for the value column
     $width      optional bootstrap column class
+    $secondField optional extra property to show in a second column
+    $secondLabel header for that second column
 --}}
 <div class="{{ $width ?? 'col-lg-4 col-md-6' }}">
     <h5>{{ $heading }}</h5>
@@ -20,6 +22,9 @@
                     <th>#</th>
                     <th>Member</th>
                     <th class="text-right">{{ $valueLabel }}</th>
+                    @isset($secondField)
+                        <th class="text-right">{{ $secondLabel }}</th>
+                    @endisset
                 </tr>
             </thead>
             <tbody>
@@ -33,6 +38,9 @@
                             @endif
                         </td>
                         <td class="text-right">{{ number_format($row->{$field}) }}</td>
+                        @isset($secondField)
+                            <td class="text-right">{{ number_format($row->{$secondField}) }}</td>
+                        @endisset
                     </tr>
                 @endforeach
             </tbody>
