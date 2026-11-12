@@ -518,6 +518,8 @@ class NetWorthService
         $priceExpression = $this->priceExpression();
         $plexTypes = $this->plexTypeList();
         $wrapType = self::ASSET_SAFETY_WRAP_TYPE_ID;
+        $regionJoins = $this->regionJoins();
+        $regionExpression = $this->regionExpression();
 
         $sql = <<<SQL
             WITH RECURSIVE roots AS (
@@ -544,14 +546,12 @@ class NetWorthService
             )
             SELECT r.item_id, r.location_id, r.root_location, r.quantity, r.type_id,
                    r.asset_name, r.in_asset_safety,
-                   COALESCE(md_direct.regionID, md_struct.regionID) AS region_id,
+                   {$regionExpression} AS region_id,
                    COALESCE(it.typeName, CONCAT('Type ', r.type_id)) AS type_name,
                    ic.categoryID AS category_id,
                    {$priceExpression} AS value
             FROM roots r
-            LEFT JOIN universe_structures us ON us.structure_id = r.root_location
-            LEFT JOIN mapDenormalize md_direct ON md_direct.itemID = r.root_location
-            LEFT JOIN mapDenormalize md_struct ON md_struct.itemID = us.solar_system_id
+{$regionJoins}
             LEFT JOIN market_prices mp ON mp.type_id = r.type_id
             LEFT JOIN invTypes it ON it.typeID = r.type_id
             LEFT JOIN invGroups ig ON ig.groupID = it.groupID
@@ -631,6 +631,38 @@ class NetWorthService
             ->sortByDesc('total_value')
             ->values()
             ->all();
+    }
+
+    /**
+     * The joins every asset query needs to place a root location, and the
+     * expression that reads a region out of them. Shared so the snapshot
+     * and the drill-down can never disagree about where something is.
+     *
+     * Four sources, because no one of them covers everything:
+     *
+     *   - a player structure SeAT has resolved, via its solar system
+     *   - the SDE celestial table, which covers NPC stations and, for a
+     *     ship left in space, the solar system row itself
+     *   - staStations, for the NPC stations the celestial table omits -
+     *     Zarzakh's Fulcrum is in one and not the other
+     *   - solar_systems directly, in case a system ever reaches us with
+     *     no celestial row at all
+     */
+    private function regionJoins(): string
+    {
+        return <<<SQL
+            LEFT JOIN universe_structures us ON us.structure_id = r.root_location
+            LEFT JOIN mapDenormalize md_direct ON md_direct.itemID = r.root_location
+            LEFT JOIN mapDenormalize md_struct ON md_struct.itemID = us.solar_system_id
+            LEFT JOIN staStations sta_direct ON sta_direct.stationID = r.root_location
+            LEFT JOIN solar_systems ss_space ON ss_space.system_id = r.root_location
+        SQL;
+    }
+
+    private function regionExpression(): string
+    {
+        return 'COALESCE(md_direct.regionID, md_struct.regionID, '
+            . 'sta_direct.regionID, ss_space.region_id)';
     }
 
     /**
@@ -791,6 +823,8 @@ class NetWorthService
         $plexTypes = $this->plexTypeList();
         $wrapType = self::ASSET_SAFETY_WRAP_TYPE_ID;
         $piCategory = self::PI_CATEGORY_ID;
+        $regionJoins = $this->regionJoins();
+        $regionExpression = $this->regionExpression();
 
         $sql = <<<SQL
             WITH RECURSIVE roots AS (
@@ -818,13 +852,11 @@ class NetWorthService
             SELECT r.character_id,
                    r.root_location,
                    r.in_asset_safety,
-                   COALESCE(md_direct.regionID, md_struct.regionID) AS region_id,
+                   {$regionExpression} AS region_id,
                    SUM(CASE WHEN ic.categoryID = {$piCategory} THEN {$priceExpression} ELSE 0 END) AS pi_value,
                    SUM(CASE WHEN ic.categoryID = {$piCategory} THEN 0 ELSE {$priceExpression} END) AS other_value
             FROM roots r
-            LEFT JOIN universe_structures us ON us.structure_id = r.root_location
-            LEFT JOIN mapDenormalize md_direct ON md_direct.itemID = r.root_location
-            LEFT JOIN mapDenormalize md_struct ON md_struct.itemID = us.solar_system_id
+{$regionJoins}
             LEFT JOIN market_prices mp ON mp.type_id = r.type_id
             LEFT JOIN invTypes it ON it.typeID = r.type_id
             LEFT JOIN invGroups ig ON ig.groupID = it.groupID
