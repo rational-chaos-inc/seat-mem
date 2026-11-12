@@ -24,6 +24,12 @@ return [
                 'permission' => 'member-engagement.view_all_activities',
             ],
             [
+                'name' => 'Capital Tracking',
+                'icon' => 'fas fa-rocket',
+                'route' => 'member-engagement.capitals',
+                'permission' => 'member-engagement.view_all_activities',
+            ],
+            [
                 'name' => 'Settings',
                 'icon' => 'fas fa-cog',
                 'route' => 'member-engagement.settings',
