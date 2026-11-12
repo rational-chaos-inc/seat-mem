@@ -26,6 +26,15 @@ class RefreshCapitalsCommand extends Command
             count($payload['accounts'])
         ));
 
+        if (!empty($payload['missing_groups'])) {
+            $this->warn(sprintf(
+                'Not counted - the local SDE has no record of: %s. Run '
+                . 'php artisan eve:update:sde to pick up hull classes CCP has '
+                . 'added since the last import.',
+                implode(', ', $payload['missing_groups'])
+            ));
+        }
+
         return self::SUCCESS;
     }
 }

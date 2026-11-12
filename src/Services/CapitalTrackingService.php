@@ -23,13 +23,20 @@ class CapitalTrackingService
      * they are shown. Freighters aren't combat capitals but they're
      * capital-sized logistics and directors ask after them, so they're
      * here too - at the end.
+     *
+     * A class only counts if the install's SDE actually knows about it -
+     * the hull query joins invTypes/invGroups - so a class CCP has added
+     * since the last `php artisan eve:update:sde` is invisible until the
+     * SDE is refreshed. missingGroups() reports any such class rather
+     * than letting the hulls quietly vanish.
      */
     private const CAPITAL_GROUPS = [
         30 => 'Titan',
         659 => 'Supercarrier',
         485 => 'Dreadnought',
-        4594 => 'Lancer Dreadnought',
+        4594 => 'Lancer',
         547 => 'Carrier',
+        5120 => 'Command Carrier',
         1538 => 'Force Auxiliary',
         883 => 'Capital Industrial Ship',
         902 => 'Jump Freighter',
@@ -68,7 +75,7 @@ class CapitalTrackingService
      * flushed cache shows real figures rather than an empty page, it just
      * pays for them once.
      *
-     * @return array{types: array, accounts: array, generated_at: ?Carbon}
+     * @return array{types: array, accounts: array, missing_groups: array, generated_at: ?Carbon}
      */
     public function cached(): array
     {
@@ -81,6 +88,7 @@ class CapitalTrackingService
         return [
             'types' => $payload['types'] ?? [],
             'accounts' => $payload['accounts'] ?? [],
+            'missing_groups' => $payload['missing_groups'] ?? [],
             'generated_at' => isset($payload['generated_at'])
                 ? Carbon::parse($payload['generated_at'])
                 : null,
@@ -98,14 +106,15 @@ class CapitalTrackingService
     }
 
     /**
-     * @return array{types: array, accounts: array}
+     * @return array{types: array, accounts: array, missing_groups: array}
      */
     public function build(): array
     {
+        $missingGroups = $this->missingGroups();
         $groups = $this->consolidation->allAccountGroups();
 
         if (empty($groups)) {
-            return ['types' => [], 'accounts' => []];
+            return ['types' => [], 'accounts' => [], 'missing_groups' => $missingGroups];
         }
 
         $characterToMain = [];
@@ -118,7 +127,7 @@ class CapitalTrackingService
         $hulls = $this->hulls(array_keys($characterToMain));
 
         if ($hulls->isEmpty()) {
-            return ['types' => [], 'accounts' => []];
+            return ['types' => [], 'accounts' => [], 'missing_groups' => $missingGroups];
         }
 
         $names = $this->characterNames($hulls->pluck('character_id')->unique()->all());
@@ -140,7 +149,30 @@ class CapitalTrackingService
         return [
             'types' => $this->byType($hulls, $accountNames),
             'accounts' => $this->byAccount($hulls, $groups, $accountNames),
+            'missing_groups' => $missingGroups,
         ];
+    }
+
+    /**
+     * Tracked hull classes this install's SDE has never heard of, as
+     * groupID => name.
+     *
+     * CCP adds capital classes (Lancers, Command Carriers)
+     * faster than most installs re-import the SDE, and because the hull
+     * query joins invTypes the hulls simply aren't returned - no error,
+     * just a missing column. Reporting it makes the cause obvious.
+     *
+     * @return array<int, string>
+     */
+    public function missingGroups(): array
+    {
+        $known = DB::table('invGroups')
+            ->whereIn('groupID', array_keys(self::CAPITAL_GROUPS))
+            ->pluck('groupID')
+            ->map(fn($id) => (int) $id)
+            ->all();
+
+        return array_diff_key(self::CAPITAL_GROUPS, array_flip($known));
     }
 
     /**

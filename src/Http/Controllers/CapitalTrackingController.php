@@ -29,6 +29,7 @@ class CapitalTrackingController
             'types' => $data['types'],
             'accounts' => $data['accounts'],
             'generatedAt' => $data['generated_at'],
+            'missingGroups' => $data['missing_groups'],
             'groups' => $this->capitals->groups(),
             'primaryCorporationName' => $primaryCorporationId === null
                 ? null

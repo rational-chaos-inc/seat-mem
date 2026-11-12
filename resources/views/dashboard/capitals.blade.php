@@ -26,6 +26,17 @@
                     @endif
                     - counted across every linked character on the account. Click a row to expand it.
                 </p>
+                @if(!empty($missingGroups))
+                    <div class="alert alert-warning mt-2 mb-2">
+                        <strong>{{ implode(', ', $missingGroups) }}</strong>
+                        @if(count($missingGroups) === 1) is @else are @endif
+                        not counted below - this install's SDE has no record of
+                        @if(count($missingGroups) === 1) that class @else those classes @endif.
+                        Run <code>php artisan eve:update:sde</code> to pick up hull
+                        classes CCP has added since the last import, then
+                        <code>php artisan member-engagement:refresh-capitals</code>.
+                    </div>
+                @endif
                 <p class="small text-muted mb-0">
                     Rebuilt every three hours rather than on each page load - walking every
                     character's assets is too slow to do while you wait. Run

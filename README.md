@@ -53,7 +53,11 @@ on a Corporation View, plus each member's own figures on My Activities.
   to who holds it) and by member (a column per class, expanding to each
   hull with the character holding it and the system and region it sits
   in). Covers Titans, Supercarriers, Dreadnoughts, Lancers, Carriers,
-  Force Auxiliaries, Capital Industrials, Jump Freighters and Freighters.
+  Command Carriers, Force Auxiliaries, Capital Industrials, Jump
+  Freighters and Freighters - a class CCP has added since this install
+  last imported the SDE can't be counted (the hull query joins
+  `invTypes`), so the page says which classes those are and tells you to
+  run `php artisan eve:update:sde`.
   Rebuilt on a three-hour schedule rather than per page load - walking
   every character's assets is too slow to do while someone waits - and the
   page shows how old the figures are
