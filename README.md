@@ -53,7 +53,10 @@ on a Corporation View, plus each member's own figures on My Activities.
   to who holds it) and by member (a column per class, expanding to each
   hull with the character holding it and the system and region it sits
   in). Covers Titans, Supercarriers, Dreadnoughts, Lancers, Carriers,
-  Force Auxiliaries, Capital Industrials, Jump Freighters and Freighters
+  Force Auxiliaries, Capital Industrials, Jump Freighters and Freighters.
+  Rebuilt on a three-hour schedule rather than per page load - walking
+  every character's assets is too slow to do while someone waits - and the
+  page shows how old the figures are
 - **Settings page** — a single set of per-metric visibility (Directors /
   Members / Both), weighting, Fleet Participation minimum size, the
   presence minimum, and the managed home and deployment region lists,
@@ -134,6 +137,7 @@ Registered automatically once the plugin boots:
 | `member-engagement:sync` | every 15 min | Pull new activity from SeAT's locally-synced mining/killmail/wallet data |
 | `member-engagement:aggregate` | every 30 min | Roll activities up into daily per-character stats |
 | `member-engagement:resolve-names --limit=1000` | every 20 min | Resolve character/corp/alliance names via ESI |
+| `member-engagement:refresh-capitals` | every 3 hours | Rebuild the cached Capital Tracking dataset |
 | `member-engagement:snapshot-net-worth` | 04:23 daily | Record each account's asset value, wallet balance and asset regions |
 | `member-engagement:finalize-month` | 02:15 on the 1st of the month | Roll the month that just ended into a finalized monthly snapshot, net worth included |
 
