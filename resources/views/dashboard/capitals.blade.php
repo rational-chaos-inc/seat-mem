@@ -29,10 +29,10 @@
                 @if(!empty($missingGroups))
                     <div class="alert alert-warning mt-2 mb-2">
                         <strong>{{ implode(', ', $missingGroups) }}</strong>
-                        @if(count($missingGroups) === 1) is @else are @endif
+                        {{ count($missingGroups) === 1 ? 'is' : 'are' }}
                         not counted below - neither this install's SDE nor this
                         plugin can resolve
-                        @if(count($missingGroups) === 1) that class @else those classes @endif.
+                        {{ count($missingGroups) === 1 ? 'that class' : 'those classes' }}.
                         SeAT pins the SDE to a single build, so a class CCP has
                         added recently needs its hull type ids adding to the
                         plugin. Please report it.
