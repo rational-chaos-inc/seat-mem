@@ -56,7 +56,7 @@
                                             <thead>
                                                 <tr>
                                                     <th>Member</th>
-                                                    <th class="text-right">{{ $type['type_name'] }}s</th>
+                                                    <th class="text-right">Held</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
