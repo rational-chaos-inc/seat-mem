@@ -24,11 +24,12 @@ class CapitalTrackingService
      * capital-sized logistics and directors ask after them, so they're
      * here too - at the end.
      *
-     * A class only counts if the install's SDE actually knows about it -
-     * the hull query joins invTypes/invGroups - so a class CCP has added
-     * since the last `php artisan eve:update:sde` is invisible until the
-     * SDE is refreshed. missingGroups() reports any such class rather
-     * than letting the hulls quietly vanish.
+     * A class normally only counts if the install's SDE knows about it,
+     * and SeAT pins the SDE to one build in its own manifest, so a class
+     * CCP has added recently is not resolvable at all. FALLBACK_HULLS
+     * covers the affected hulls by hand; missingGroups() reports any
+     * class still left unresolvable rather than letting its hulls
+     * quietly vanish.
      */
     private const CAPITAL_GROUPS = [
         30 => 'Titan',
@@ -41,6 +42,28 @@ class CapitalTrackingService
         883 => 'Capital Industrial Ship',
         902 => 'Jump Freighter',
         513 => 'Freighter',
+    ];
+
+    /**
+     * typeID => [groupID, hull name] for hulls whose class the SDE may
+     * not know yet.
+     *
+     * SeAT pins the SDE import to a single build in its own manifest
+     * (eveseat/resources sde.json), so `eve:update:sde` does not track
+     * CCP releases - at the time of writing every SeAT install is on the
+     * July 2025 build, which predates Command Carriers entirely. Rather
+     * than show an empty column until upstream bumps that manifest, the
+     * few affected hulls are named here.
+     *
+     * The SDE always wins where it has an answer, so these entries stop
+     * being consulted the moment an install imports a build that knows
+     * them - nothing to clean up later.
+     */
+    private const FALLBACK_HULLS = [
+        92822 => [5120, 'Salvation'],
+        92823 => [5120, 'Simurgh'],
+        92824 => [5120, 'Gaia'],
+        92825 => [5120, 'Ymir'],
     ];
 
     /** Guards against a cycle in the containment tree. */
@@ -172,7 +195,12 @@ class CapitalTrackingService
             ->map(fn($id) => (int) $id)
             ->all();
 
-        return array_diff_key(self::CAPITAL_GROUPS, array_flip($known));
+        $covered = array_merge(
+            $known,
+            array_map(fn(array $hull) => $hull[0], self::FALLBACK_HULLS)
+        );
+
+        return array_diff_key(self::CAPITAL_GROUPS, array_flip($covered));
     }
 
     /**
@@ -271,6 +299,33 @@ class CapitalTrackingService
     }
 
     /**
+     * A CASE expression mapping type_id to the built-in group id (field 1)
+     * or hull name (field 2), for use where the SDE has nothing to say.
+     *
+     * The type ids and names are constants in this class, never user
+     * input, so inlining them is safe - and it has to be inlined, since
+     * the query is raw SQL driving a recursive CTE.
+     */
+    private function fallbackCase(int $field): string
+    {
+        if (empty(self::FALLBACK_HULLS)) {
+            return 'NULL';
+        }
+
+        $cases = '';
+
+        foreach (self::FALLBACK_HULLS as $typeId => $hull) {
+            $value = $field === 1
+                ? (int) $hull[0]
+                : "'" . str_replace("'", "''", $hull[1]) . "'";
+
+            $cases .= sprintf(' WHEN %d THEN %s', (int) $typeId, $value);
+        }
+
+        return "CASE r.type_id{$cases} END";
+    }
+
+    /**
      * Every capital hull held by the given characters, resolved to the
      * system and region it is sitting in.
      *
@@ -285,6 +340,8 @@ class CapitalTrackingService
         $ids = implode(',', array_map('intval', $characterIds));
         $groupIds = implode(',', array_keys(self::CAPITAL_GROUPS));
         $maxDepth = self::MAX_NESTING_DEPTH;
+        $fallbackGroups = $this->fallbackCase(1);
+        $fallbackNames = $this->fallbackCase(2);
 
         $sql = <<<SQL
             WITH RECURSIVE roots AS (
@@ -302,22 +359,24 @@ class CapitalTrackingService
                 JOIN roots r ON a.location_id = r.item_id
                 WHERE r.depth < {$maxDepth}
             )
-            SELECT r.character_id, r.type_id, r.quantity,
-                   it.typeName AS type_name,
-                   ig.groupID AS group_id,
-                   ig.groupName AS group_name,
-                   ss.name AS system_name,
-                   reg.name AS region_name
-            FROM roots r
-            JOIN invTypes it ON it.typeID = r.type_id
-            JOIN invGroups ig ON ig.groupID = it.groupID
-            LEFT JOIN universe_structures us ON us.structure_id = r.root_location
-            LEFT JOIN mapDenormalize md ON md.itemID = r.root_location
-            LEFT JOIN staStations sta ON sta.stationID = r.root_location
-            LEFT JOIN solar_systems ss
-                   ON ss.system_id = COALESCE(us.solar_system_id, md.solarSystemID, sta.solarSystemID)
-            LEFT JOIN regions reg ON reg.region_id = ss.region_id
-            WHERE ig.groupID IN ({$groupIds})
+            SELECT * FROM (
+                SELECT r.character_id, r.type_id, r.quantity,
+                       COALESCE(it.typeName, {$fallbackNames}) AS type_name,
+                       COALESCE(ig.groupID, {$fallbackGroups}) AS group_id,
+                       ig.groupName AS group_name,
+                       ss.name AS system_name,
+                       reg.name AS region_name
+                FROM roots r
+                LEFT JOIN invTypes it ON it.typeID = r.type_id
+                LEFT JOIN invGroups ig ON ig.groupID = it.groupID
+                LEFT JOIN universe_structures us ON us.structure_id = r.root_location
+                LEFT JOIN mapDenormalize md ON md.itemID = r.root_location
+                LEFT JOIN staStations sta ON sta.stationID = r.root_location
+                LEFT JOIN solar_systems ss
+                       ON ss.system_id = COALESCE(us.solar_system_id, md.solarSystemID, sta.solarSystemID)
+                LEFT JOIN regions reg ON reg.region_id = ss.region_id
+            ) resolved
+            WHERE resolved.group_id IN ({$groupIds})
         SQL;
 
         return collect(DB::select($sql));

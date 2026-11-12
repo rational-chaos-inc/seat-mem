@@ -54,10 +54,11 @@ on a Corporation View, plus each member's own figures on My Activities.
   hull with the character holding it and the system and region it sits
   in). Covers Titans, Supercarriers, Dreadnoughts, Lancers, Carriers,
   Command Carriers, Force Auxiliaries, Capital Industrials, Jump
-  Freighters and Freighters - a class CCP has added since this install
-  last imported the SDE can't be counted (the hull query joins
-  `invTypes`), so the page says which classes those are and tells you to
-  run `php artisan eve:update:sde`.
+  Freighters and Freighters. Note SeAT pins its SDE import to a single
+  build in its own manifest (currently the July 2025 one), so the newest
+  hull classes aren't in `invGroups` on any install - those hulls are
+  named in the plugin instead, and the page says so if a tracked class
+  can't be resolved either way
   Rebuilt on a three-hour schedule rather than per page load - walking
   every character's assets is too slow to do while someone waits - and the
   page shows how old the figures are

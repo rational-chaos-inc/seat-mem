@@ -28,9 +28,10 @@ class RefreshCapitalsCommand extends Command
 
         if (!empty($payload['missing_groups'])) {
             $this->warn(sprintf(
-                'Not counted - the local SDE has no record of: %s. Run '
-                . 'php artisan eve:update:sde to pick up hull classes CCP has '
-                . 'added since the last import.',
+                'Not counted - neither the local SDE nor this plugin can '
+                . 'resolve: %s. SeAT pins the SDE to one build, so a class '
+                . 'CCP has added recently needs its hull type ids adding to '
+                . 'CapitalTrackingService::FALLBACK_HULLS.',
                 implode(', ', $payload['missing_groups'])
             ));
         }

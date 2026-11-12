@@ -30,11 +30,12 @@
                     <div class="alert alert-warning mt-2 mb-2">
                         <strong>{{ implode(', ', $missingGroups) }}</strong>
                         @if(count($missingGroups) === 1) is @else are @endif
-                        not counted below - this install's SDE has no record of
+                        not counted below - neither this install's SDE nor this
+                        plugin can resolve
                         @if(count($missingGroups) === 1) that class @else those classes @endif.
-                        Run <code>php artisan eve:update:sde</code> to pick up hull
-                        classes CCP has added since the last import, then
-                        <code>php artisan member-engagement:refresh-capitals</code>.
+                        SeAT pins the SDE to a single build, so a class CCP has
+                        added recently needs its hull type ids adding to the
+                        plugin. Please report it.
                     </div>
                 @endif
                 <p class="small text-muted mb-0">
