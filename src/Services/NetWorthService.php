@@ -861,7 +861,9 @@ class NetWorthService
             LEFT JOIN invTypes it ON it.typeID = r.type_id
             LEFT JOIN invGroups ig ON ig.groupID = it.groupID
             LEFT JOIN invCategories ic ON ic.categoryID = ig.categoryID
-            GROUP BY r.character_id, r.root_location, r.in_asset_safety, region_id
+            -- By the expression, not the alias: solar_systems brings a real
+            -- region_id column into scope, which the alias would bind to.
+            GROUP BY r.character_id, r.root_location, r.in_asset_safety, {$regionExpression}
         SQL;
 
         return DB::select($sql);
