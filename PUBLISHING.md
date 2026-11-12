@@ -12,12 +12,22 @@ This guide explains how to publish the SeAT Member Engagement Module to Packagis
 
 ## Step 1: Create a GitHub Release
 
+**Tag without a `v` prefix.** SeAT's settings page renders the installed
+version as `v{getVersion()}`, and `getVersion()` is `final` in
+`AbstractSeatPlugin` - it returns Composer's pretty version, which is the
+literal tag string. A tag of `v8.18.0` therefore displays as `vv8.18.0`,
+and no code in this package can change that. Every other SeAT plugin tags
+bare (`3.0.2`, `2.0.5`), which is why they render correctly.
+
+Tags up to `v8.18.0` carry the old prefix; from `8.18.1` onwards they don't.
+Composer normalises both, so ordering across the change is still correct.
+
 Create a semantic version tag for your first release:
 
 ```bash
 # Create and push a git tag
-git tag v1.0.0
-git push origin v1.0.0
+git tag 1.0.0
+git push origin 1.0.0
 ```
 
 Or create via GitHub UI:
@@ -61,16 +71,16 @@ For future updates:
 
 ```bash
 # For minor feature updates
-git tag v1.1.0
-git push origin v1.1.0
+git tag 1.1.0
+git push origin 1.1.0
 
 # For bug fixes
-git tag v1.0.1
-git push origin v1.0.1
+git tag 1.0.1
+git push origin 1.0.1
 
 # For major breaking changes
-git tag v2.0.0
-git push origin v2.0.0
+git tag 2.0.0
+git push origin 2.0.0
 ```
 
 Packagist will automatically detect new tags and update the package listing.
