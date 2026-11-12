@@ -551,7 +551,7 @@ class NetWorthService
                    ic.categoryID AS category_id,
                    {$priceExpression} AS value
             FROM roots r
-{$regionJoins}
+            {$regionJoins}
             LEFT JOIN market_prices mp ON mp.type_id = r.type_id
             LEFT JOIN invTypes it ON it.typeID = r.type_id
             LEFT JOIN invGroups ig ON ig.groupID = it.groupID
@@ -856,7 +856,7 @@ class NetWorthService
                    SUM(CASE WHEN ic.categoryID = {$piCategory} THEN {$priceExpression} ELSE 0 END) AS pi_value,
                    SUM(CASE WHEN ic.categoryID = {$piCategory} THEN 0 ELSE {$priceExpression} END) AS other_value
             FROM roots r
-{$regionJoins}
+            {$regionJoins}
             LEFT JOIN market_prices mp ON mp.type_id = r.type_id
             LEFT JOIN invTypes it ON it.typeID = r.type_id
             LEFT JOIN invGroups ig ON ig.groupID = it.groupID
