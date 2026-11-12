@@ -52,7 +52,8 @@ on a Corporation View, plus each member's own figures on My Activities.
   character in the primary corporation, two ways: by hull type (expanding
   to who holds it) and by member (a column per class, expanding to each
   hull with the character holding it and the system and region it sits
-  in). Covers Titans, Supercarriers, Dreadnoughts, Lancers, Carriers,
+  in, badged "in space" if it was left undocked), with a totals row
+  across every member. Covers Titans, Supercarriers, Dreadnoughts, Lancers, Carriers,
   Command Carriers, Force Auxiliaries, Capital Industrials, Jump
   Freighters and Freighters. Note SeAT pins its SDE import to a single
   build in its own manifest (currently the July 2025 one), so the newest
@@ -208,7 +209,13 @@ return [
   excluded entirely - they price as originals, which on the dev data inflated
   the total by 4.5x.
   Assets in structures SeAT can't resolve are grouped as "unknown" and left
-  out of the home presence calculation rather than counted as away.
+  out of the home presence calculation rather than counted as away. Nothing
+  can resolve those, not even ESI: asked with the owning character's own
+  token, `/universe/structures` answers Forbidden, and the asset names and
+  locations endpoints reject the id because it isn't in that character's
+  asset list. A ship left in space is a different case and does resolve -
+  it is parented to the solar system itself, and reads as
+  "In space - <system>".
 - **Heartbeat can't backfill history**: ESI's online endpoint (and SeAT's
   `character_onlines` sync of it) only ever holds each character's MOST
   RECENT known login/logout, not a history. A day is only ever recorded as
