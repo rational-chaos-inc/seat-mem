@@ -171,7 +171,13 @@
                                                                 </td>
                                                                 <td>{{ $ship['group_name'] }}</td>
                                                                 <td>{{ $ship['character_name'] }}</td>
-                                                                <td>{{ $ship['system'] }}</td>
+                                                                <td>
+                                                                    {{ $ship['system'] }}
+                                                                    @if($ship['in_space'])
+                                                                        <span class="badge badge-warning ml-1"
+                                                                              title="Left in space, not docked">in space</span>
+                                                                    @endif
+                                                                </td>
                                                                 <td>{{ $ship['region'] }}</td>
                                                             </tr>
                                                         @endforeach
@@ -182,6 +188,17 @@
                                     </tr>
                                 @endforeach
                             </tbody>
+                            <tfoot>
+                                <tr class="font-weight-bold bg-light border-top">
+                                    <td>Total ({{ count($accounts) }} members)</td>
+                                    @foreach($groups as $groupId => $groupName)
+                                        <td class="text-right">
+                                            {{ collect($accounts)->sum(fn($account) => $account['counts'][$groupId]) ?: '-' }}
+                                        </td>
+                                    @endforeach
+                                    <td class="text-right">{{ collect($accounts)->sum('total') }}</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 @endif

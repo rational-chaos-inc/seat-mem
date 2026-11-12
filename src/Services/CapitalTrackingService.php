@@ -165,6 +165,7 @@ class CapitalTrackingService
             'group_id' => (int) $hull->group_id,
             'group_name' => self::CAPITAL_GROUPS[(int) $hull->group_id] ?? $hull->group_name,
             'system' => $hull->system_name ?? 'Unknown location',
+            'in_space' => (int) $hull->in_space === 1,
             'region' => $hull->region_name ?? 'Unknown',
             'quantity' => (int) $hull->quantity,
         ]);
@@ -278,6 +279,7 @@ class CapitalTrackingService
                             'group_name' => $hull->group_name,
                             'character_name' => $hull->character_name,
                             'system' => $hull->system,
+                            'in_space' => $hull->in_space,
                             'region' => $hull->region,
                             'quantity' => $hull->quantity,
                         ])
@@ -365,15 +367,21 @@ class CapitalTrackingService
                        COALESCE(ig.groupID, {$fallbackGroups}) AS group_id,
                        ig.groupName AS group_name,
                        ss.name AS system_name,
-                       reg.name AS region_name
+                       reg.name AS region_name,
+                       CASE WHEN ss.system_id = r.root_location THEN 1 ELSE 0 END AS in_space
                 FROM roots r
                 LEFT JOIN invTypes it ON it.typeID = r.type_id
                 LEFT JOIN invGroups ig ON ig.groupID = it.groupID
                 LEFT JOIN universe_structures us ON us.structure_id = r.root_location
                 LEFT JOIN mapDenormalize md ON md.itemID = r.root_location
                 LEFT JOIN staStations sta ON sta.stationID = r.root_location
+                -- root_location last: a ship left in space reports the
+                -- solar system as its location, and the SDE row for a
+                -- system carries a region but leaves solarSystemID null,
+                -- so the three joins above all come back empty for it.
                 LEFT JOIN solar_systems ss
-                       ON ss.system_id = COALESCE(us.solar_system_id, md.solarSystemID, sta.solarSystemID)
+                       ON ss.system_id = COALESCE(us.solar_system_id, md.solarSystemID,
+                                                  sta.solarSystemID, r.root_location)
                 LEFT JOIN regions reg ON reg.region_id = ss.region_id
             ) resolved
             WHERE resolved.group_id IN ({$groupIds})

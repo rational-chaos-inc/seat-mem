@@ -642,8 +642,11 @@ class NetWorthService
      *
      * What is left over is genuinely unreachable: customs offices, the
      * PLEX vault, and structures nobody linked here has docking access to.
-     * ESI can't name those either, so they fall back to a label rather
-     * than a bare id.
+     * ESI can't name those either - asked with the owning character's own
+     * token, /universe/structures answers Forbidden and the asset names and
+     * locations endpoints reject the id outright, because it is not in that
+     * character's asset list - so they fall back to a label rather than a
+     * bare id.
      *
      * @param  array  $locationIds
      * @return array<string, array{name: string, type_id: int|null}>
@@ -672,11 +675,21 @@ class NetWorthService
             ->get(['stationID', 'stationName', 'stationTypeID'])
             ->keyBy(fn($row) => (string) $row->stationID);
 
+        // A ship left in space is parented to the solar system itself, not
+        // to any container, so these read as a place rather than a hangar.
+        $systems = DB::table('solar_systems')
+            ->whereIn('system_id', $ids)
+            ->pluck('name', 'system_id')
+            ->mapWithKeys(fn($name, $id) => [(string) $id => $name]);
+
         $fallback = $bucket === self::CUSTOMS_OFFICE ? 'Customs office' : 'Unreachable structure';
 
-        return $ids->mapWithKeys(function ($id) use ($structures, $sde, $stations, $fallback) {
+        return $ids->mapWithKeys(function ($id) use ($structures, $sde, $stations, $systems, $fallback) {
             if ($structure = $structures->get($id)) {
                 return [$id => ['name' => $structure->name, 'type_id' => (int) $structure->type_id]];
+            }
+            if ($system = $systems->get($id)) {
+                return [$id => ['name' => 'In space - ' . $system, 'type_id' => null]];
             }
             if ($entry = $sde->get($id)) {
                 return [$id => ['name' => $entry->itemName, 'type_id' => (int) $entry->typeID]];
