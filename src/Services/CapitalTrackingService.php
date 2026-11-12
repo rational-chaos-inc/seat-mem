@@ -2,7 +2,9 @@
 
 namespace RCI\MemberEngagement\Services;
 
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -37,6 +39,14 @@ class CapitalTrackingService
     /** Guards against a cycle in the containment tree. */
     private const MAX_NESTING_DEPTH = 20;
 
+    private const CACHE_KEY = 'member-engagement:capitals';
+
+    /**
+     * Held a little longer than the three-hour refresh, so a refresh that
+     * runs late doesn't leave the page with nothing to show.
+     */
+    private const CACHE_TTL_MINUTES = 240;
+
     public function __construct(
         private AccountConsolidationService $consolidation,
         private EntityResolutionService $entityResolution,
@@ -47,6 +57,44 @@ class CapitalTrackingService
     public function groups(): array
     {
         return self::CAPITAL_GROUPS;
+    }
+
+    /**
+     * The cached dataset. Walking every linked character's asset tree is
+     * too slow to do on a page load once an install has a few hundred
+     * characters, so the page reads a snapshot refreshed on a schedule.
+     *
+     * Computes on demand if the cache is empty - a fresh install or a
+     * flushed cache shows real figures rather than an empty page, it just
+     * pays for them once.
+     *
+     * @return array{types: array, accounts: array, generated_at: ?Carbon}
+     */
+    public function cached(): array
+    {
+        $payload = Cache::get(self::CACHE_KEY);
+
+        if (!is_array($payload)) {
+            $payload = $this->refresh();
+        }
+
+        return [
+            'types' => $payload['types'] ?? [],
+            'accounts' => $payload['accounts'] ?? [],
+            'generated_at' => isset($payload['generated_at'])
+                ? Carbon::parse($payload['generated_at'])
+                : null,
+        ];
+    }
+
+    /** Recompute and store. Returns what was stored. */
+    public function refresh(): array
+    {
+        $payload = $this->build() + ['generated_at' => Carbon::now()->toIso8601String()];
+
+        Cache::put(self::CACHE_KEY, $payload, Carbon::now()->addMinutes(self::CACHE_TTL_MINUTES));
+
+        return $payload;
     }
 
     /**

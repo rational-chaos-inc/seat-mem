@@ -23,11 +23,12 @@ class CapitalTrackingController
         }
 
         $primaryCorporationId = $this->consolidation->primaryCorporationId();
-        $data = $this->capitals->build();
+        $data = $this->capitals->cached();
 
         return view('member-engagement::dashboard.capitals', [
             'types' => $data['types'],
             'accounts' => $data['accounts'],
+            'generatedAt' => $data['generated_at'],
             'groups' => $this->capitals->groups(),
             'primaryCorporationName' => $primaryCorporationId === null
                 ? null

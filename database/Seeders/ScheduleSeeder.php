@@ -37,6 +37,14 @@ class ScheduleSeeder extends AbstractScheduleSeeder
                 'ping_after' => null,
             ],
             [
+                'command' => 'member-engagement:refresh-capitals',
+                'expression' => '17 */3 * * *',  // every 3 hours, offset off the hour
+                'allow_overlap' => false,
+                'allow_maintenance' => false,
+                'ping_before' => null,
+                'ping_after' => null,
+            ],
+            [
                 'command' => 'member-engagement:snapshot-net-worth',
                 'expression' => '23 4 * * *',  // 04:23 UTC - deliberately off-peak
                 'allow_overlap' => false,

@@ -104,6 +104,7 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
             \RCI\MemberEngagement\Commands\FinalizeMonthCommand::class,
             \RCI\MemberEngagement\Commands\DiagnosePvpCommand::class,
             \RCI\MemberEngagement\Commands\SnapshotNetWorthCommand::class,
+            \RCI\MemberEngagement\Commands\RefreshCapitalsCommand::class,
         ]);
     }
 

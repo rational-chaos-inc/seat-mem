@@ -9,6 +9,14 @@
         <div class="card">
             <div class="card-header">
                 <h4 class="card-title">Capital Tracking</h4>
+                <div class="card-tools pull-right">
+                    @if($generatedAt)
+                        <span class="small text-muted">
+                            As of {{ $generatedAt->format('d/m/Y H:i') }} UTC
+                            ({{ $generatedAt->diffForHumans() }})
+                        </span>
+                    @endif
+                </div>
             </div>
             <div class="card-body">
                 <p class="text-muted mb-0">
@@ -17,6 +25,12 @@
                         with at least one character in <strong>{{ $primaryCorporationName }}</strong>
                     @endif
                     - counted across every linked character on the account. Click a row to expand it.
+                </p>
+                <p class="small text-muted mb-0">
+                    Rebuilt every three hours rather than on each page load - walking every
+                    character's assets is too slow to do while you wait. Run
+                    <code>php artisan member-engagement:refresh-capitals</code> for an
+                    immediate rebuild.
                 </p>
             </div>
         </div>
