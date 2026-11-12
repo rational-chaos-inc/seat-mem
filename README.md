@@ -48,6 +48,12 @@ on a Corporation View, plus each member's own figures on My Activities.
   nested as they sit. Asset safety counts as away (we know where it is, it just
   isn't usable there); customs offices and unresolvable locations are left
   out of the calculation entirely
+- **Capital Tracking** — every capital hull held by accounts with a
+  character in the primary corporation, two ways: by hull type (expanding
+  to who holds it) and by member (a column per class, expanding to each
+  hull with the character holding it and the system and region it sits
+  in). Covers Titans, Supercarriers, Dreadnoughts, Lancers, Carriers,
+  Force Auxiliaries, Capital Industrials, Jump Freighters and Freighters
 - **Settings page** — a single set of per-metric visibility (Directors /
   Members / Both), weighting, Fleet Participation minimum size, the
   presence minimum, and the managed home and deployment region lists,
@@ -115,6 +121,8 @@ seeding on plugin boot) — no manual seeding step needed.
 - **Corporation View:** `/member-engagement/director` — the four monthly
   leaderboards plus the Heartbeat list (requires `view_all_activities`).
   Scoped to registered SeAT members only; see Known Limitations
+- **Capital Tracking:** `/member-engagement/capitals` — capital hulls by
+  type and by member (requires `view_all_activities`)
 - **Settings:** `/member-engagement/settings` (requires `view_all_activities`)
 
 ## Scheduled Commands
