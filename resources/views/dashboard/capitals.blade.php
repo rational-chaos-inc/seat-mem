@@ -397,7 +397,8 @@
                             </thead>
                             <tbody>
                                 @foreach($regions as $region)
-                                    <tr>
+                                    <tr class="me-expand" style="cursor: pointer;"
+                                        data-target="region-{{ $loop->index }}">
                                         <td>
                                             {{ $region['region'] }}
                                             @if($region['in_space'] > 0)
@@ -415,6 +416,14 @@
                                             </td>
                                         @endforeach
                                         <td class="text-right"><strong>{{ $region['total'] }}</strong></td>
+                                    </tr>
+                                    <tr id="region-{{ $loop->index }}" hidden>
+                                        <td colspan="{{ count($groups) + 2 }}" class="bg-light">
+                                            <span class="text-muted mr-1">Held by:</span>
+                                            @foreach($region['holders'] as $holder)
+                                                {{ $holder['name'] }} ({{ $holder['count'] }}){{ $loop->last ? '' : ',' }}
+                                            @endforeach
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>

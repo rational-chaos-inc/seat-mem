@@ -189,7 +189,7 @@ class CapitalTrackingService
         return [
             'types' => $this->byType($hulls, $accountNames),
             'accounts' => $this->byAccount($hulls, $groups, $accountNames),
-            'regions' => $this->byRegion($hulls),
+            'regions' => $this->byRegion($hulls, $accountNames),
             'missing_groups' => $missingGroups,
         ];
     }
@@ -312,22 +312,34 @@ class CapitalTrackingService
 
     /**
      * One row per region, with a count per hull class - where the
-     * fleet actually is, rather than who owns it.
+     * fleet actually is, rather than who owns it - and who is keeping
+     * hulls there, for the row to expand to.
      */
-    private function byRegion(Collection $hulls): array
+    private function byRegion(Collection $hulls, array $accountNames): array
     {
         return $hulls
             ->groupBy('region')
-            ->map(function (Collection $inRegion, $region) {
+            ->map(function (Collection $inRegion, $region) use ($accountNames) {
                 $counts = [];
 
                 foreach (array_keys(self::CAPITAL_GROUPS) as $groupId) {
                     $counts[$groupId] = (int) $inRegion->where('group_id', $groupId)->sum('quantity');
                 }
 
+                $holders = $inRegion
+                    ->groupBy('main_character_id')
+                    ->map(fn(Collection $theirs, $mainId) => [
+                        'name' => $accountNames[(int) $mainId] ?? "Unknown ({$mainId})",
+                        'count' => (int) $theirs->sum('quantity'),
+                    ])
+                    ->sortByDesc('count')
+                    ->values()
+                    ->all();
+
                 return [
                     'region' => (string) $region,
                     'counts' => $counts,
+                    'holders' => $holders,
                     'total' => (int) $inRegion->sum('quantity'),
                     // Hulls sitting in space rather than docked, so a
                     // region holding them can say so.
