@@ -169,7 +169,7 @@
         </div>
 
         <div class="row">
-            <div class="col-xl-7">
+            <div class="col-xl-6">
         <div class="card">
             <div class="card-header">
                 <h4 class="card-title">By Hull Type</h4>
@@ -227,7 +227,7 @@
         </div>
             </div>
 
-            <div class="col-xl-5">
+            <div class="col-xl-6">
                 <div class="card me-viz">
                     <div class="card-header">
                         <h4 class="card-title">By Class</h4>
