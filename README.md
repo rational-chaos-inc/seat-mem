@@ -63,6 +63,16 @@ on a Corporation View, plus each member's own figures on My Activities.
   Rebuilt on a three-hour schedule rather than per page load - walking
   every character's assets is too slow to do while someone waits - and the
   page shows how old the figures are
+- **Capital fleet history** - each Capital Tracking refresh records the
+  hull count per class, and the month-end roll-up keeps the last reading
+  of each month. That feeds a By Class panel beside the hull table (a bar
+  per class, a render of the hull the corporation holds most of, and the
+  move against last month end) and a stacked chart of the fleet over
+  time: non-combat at the bottom, combat in the middle, titans and
+  supercarriers on top, with month-end points followed by one per day for
+  the month in progress. Assets have no history in SeAT, so this only
+  covers the period since the plugin started recording - nothing can
+  backfill it
 - **Settings page** — a single set of per-metric visibility (Directors /
   Members / Both), weighting, Fleet Participation minimum size, the
   presence minimum, and the managed home and deployment region lists,
@@ -143,9 +153,9 @@ Registered automatically once the plugin boots:
 | `member-engagement:sync` | every 15 min | Pull new activity from SeAT's locally-synced mining/killmail/wallet data |
 | `member-engagement:aggregate` | every 30 min | Roll activities up into daily per-character stats |
 | `member-engagement:resolve-names --limit=1000` | every 20 min | Resolve character/corp/alliance names via ESI |
-| `member-engagement:refresh-capitals` | every 3 hours | Rebuild the cached Capital Tracking dataset |
+| `member-engagement:refresh-capitals` | every 3 hours | Rebuild the cached Capital Tracking dataset and record the day's hull count per class |
 | `member-engagement:snapshot-net-worth` | 04:23 daily | Record each account's asset value, wallet balance and asset regions |
-| `member-engagement:finalize-month` | 02:15 on the 1st of the month | Roll the month that just ended into a finalized monthly snapshot, net worth included |
+| `member-engagement:finalize-month` | 02:15 on the 1st of the month | Roll the month that just ended into a finalized monthly snapshot, net worth and capital hull counts included |
 
 `sync` and `aggregate` size their own lookback window: normally they cover
 the last couple of days, but each records when it last completed, and if
@@ -197,9 +207,10 @@ return [
   nothing to consolidate under and won't appear on Corporation View or My
   Activities, regardless of how much activity they generate. This improves
   automatically as more members register their characters in SeAT.
-- **Net worth has no history before it starts**: SeAT only stores assets as
-  they are right now, so the month-on-month change column stays blank until
-  two months of snapshots have accumulated. Nothing can backfill it.
+- **Net worth and fleet history have none before they start**: SeAT only
+  stores assets as they are right now, so the month-on-month change column
+  and the capital fleet chart stay empty until snapshots have accumulated.
+  Nothing can backfill either of them.
 - **Asset values are estimates**: priced from ESI's `average_price`, falling
   back to the SDE's `invTypes.basePrice` where an item has no market price at
   all (supercarriers and the like can't be traded in Jita, so they'd
