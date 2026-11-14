@@ -5,6 +5,7 @@ namespace RCI\MemberEngagement;
 use Seat\Services\AbstractSeatPlugin;
 use RCI\MemberEngagement\Services\AccountConsolidationService;
 use RCI\MemberEngagement\Services\AggregationService;
+use RCI\MemberEngagement\Services\CapitalHistoryService;
 use RCI\MemberEngagement\Services\CapitalTrackingService;
 use RCI\MemberEngagement\Services\DataCollectionService;
 use RCI\MemberEngagement\Services\EntityResolutionService;
@@ -64,6 +65,7 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
         $this->app->singleton(RankingService::class);
         $this->app->singleton(NetWorthService::class);
         $this->app->singleton(CapitalTrackingService::class);
+        $this->app->singleton(CapitalHistoryService::class);
     }
 
     private function publishConfig(): void

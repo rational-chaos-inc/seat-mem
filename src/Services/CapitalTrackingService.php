@@ -90,6 +90,21 @@ class CapitalTrackingService
     }
 
     /**
+     * A hull id for a class, from the built-in table - the only way to
+     * name or picture a class whose hulls are not in this install's SDE.
+     */
+    public function fallbackHullFor(int $groupId): ?int
+    {
+        foreach (self::FALLBACK_HULLS as $typeId => $hull) {
+            if ($hull[0] === $groupId) {
+                return (int) $typeId;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * The cached dataset. Walking every linked character's asset tree is
      * too slow to do on a page load once an install has a few hundred
      * characters, so the page reads a snapshot refreshed on a schedule.
@@ -276,6 +291,7 @@ class CapitalTrackingService
                         ->map(fn($hull) => [
                             'type_id' => $hull->type_id,
                             'type_name' => $hull->type_name,
+                            'group_id' => $hull->group_id,
                             'group_name' => $hull->group_name,
                             'character_name' => $hull->character_name,
                             'system' => $hull->system,

@@ -5,6 +5,7 @@ namespace RCI\MemberEngagement\Commands;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use RCI\MemberEngagement\Models\DailyMemberStat;
+use RCI\MemberEngagement\Services\CapitalHistoryService;
 use RCI\MemberEngagement\Services\MonthlyAggregationService;
 use RCI\MemberEngagement\Services\NetWorthService;
 
@@ -16,8 +17,11 @@ class FinalizeMonthCommand extends Command
 
     protected $description = 'Roll up daily member stats into finalized monthly totals';
 
-    public function handle(MonthlyAggregationService $service, NetWorthService $netWorth): int
-    {
+    public function handle(
+        MonthlyAggregationService $service,
+        NetWorthService $netWorth,
+        CapitalHistoryService $capitals
+    ): int {
         if ($this->option('all')) {
             $months = DailyMemberStat::selectRaw("DISTINCT DATE_FORMAT(date, '%Y-%m-01') as month")
                 ->orderBy('month')
@@ -27,7 +31,9 @@ class FinalizeMonthCommand extends Command
                 $month = Carbon::parse($monthStr);
                 $count = $service->finalizeMonth($month);
                 $netWorthCount = $netWorth->finalizeMonth($month);
-                $this->info("{$month->format('Y-m')}: {$count} member records, {$netWorthCount} net worth records");
+                $capitalCount = $capitals->finalizeMonth($month);
+                $this->info("{$month->format('Y-m')}: {$count} member records, "
+                    . "{$netWorthCount} net worth records, {$capitalCount} capital classes");
             }
 
             return self::SUCCESS;
@@ -41,7 +47,9 @@ class FinalizeMonthCommand extends Command
         $this->info("Finalizing {$month->format('Y-m')}...");
         $count = $service->finalizeMonth($month);
         $netWorthCount = $netWorth->finalizeMonth($month);
-        $this->info("Finalized {$count} member records and {$netWorthCount} net worth records for {$month->format('Y-m')}");
+        $capitalCount = $capitals->finalizeMonth($month);
+        $this->info("Finalized {$count} member records, {$netWorthCount} net worth records "
+            . "and {$capitalCount} capital classes for {$month->format('Y-m')}");
 
         return self::SUCCESS;
     }

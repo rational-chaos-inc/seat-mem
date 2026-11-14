@@ -6,12 +6,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RCI\MemberEngagement\Services\AccountConsolidationService;
+use RCI\MemberEngagement\Services\CapitalHistoryService;
 use RCI\MemberEngagement\Services\CapitalTrackingService;
 
 class CapitalTrackingController
 {
     public function __construct(
         private CapitalTrackingService $capitals,
+        private CapitalHistoryService $history,
         private AccountConsolidationService $consolidation,
     ) {
     }
@@ -30,6 +32,9 @@ class CapitalTrackingController
             'accounts' => $data['accounts'],
             'generatedAt' => $data['generated_at'],
             'missingGroups' => $data['missing_groups'],
+            'classSummary' => $this->history->classSummary($data['accounts']),
+            'fleetHistory' => $this->history->stackedSeries(),
+            'bands' => CapitalHistoryService::BANDS,
             'groups' => $this->capitals->groups(),
             'primaryCorporationName' => $primaryCorporationId === null
                 ? null
