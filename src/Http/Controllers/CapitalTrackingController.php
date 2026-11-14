@@ -30,6 +30,7 @@ class CapitalTrackingController
         return view('member-engagement::dashboard.capitals', [
             'types' => $data['types'],
             'accounts' => $data['accounts'],
+            'regions' => $data['regions'],
             'generatedAt' => $data['generated_at'],
             'missingGroups' => $data['missing_groups'],
             'classSummary' => $this->history->classSummary($data['accounts']),

@@ -376,6 +376,65 @@
             </div>
         </div>
 
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">By Region</h4>
+            </div>
+            <div class="card-body">
+                @if(empty($regions))
+                    <div class="alert alert-info mb-0">No capital hulls found.</div>
+                @else
+                    <div style="overflow-x: auto;">
+                        <table class="table table-sm table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Region</th>
+                                    @foreach($groups as $groupName)
+                                        <th class="text-right">{{ $groupName }}</th>
+                                    @endforeach
+                                    <th class="text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($regions as $region)
+                                    <tr>
+                                        <td>
+                                            {{ $region['region'] }}
+                                            @if($region['in_space'] > 0)
+                                                <span class="badge badge-warning ml-1"
+                                                      title="Left in space, not docked">{{ $region['in_space'] }} in space</span>
+                                            @endif
+                                        </td>
+                                        @foreach($groups as $groupId => $groupName)
+                                            <td class="text-right">
+                                                @if($region['counts'][$groupId] > 0)
+                                                    {{ $region['counts'][$groupId] }}
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                        @endforeach
+                                        <td class="text-right"><strong>{{ $region['total'] }}</strong></td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot>
+                                <tr class="font-weight-bold bg-light border-top">
+                                    <td>Total ({{ count($regions) }} regions)</td>
+                                    @foreach($groups as $groupId => $groupName)
+                                        <td class="text-right">
+                                            {{ collect($regions)->sum(fn($region) => $region['counts'][$groupId]) ?: '-' }}
+                                        </td>
+                                    @endforeach
+                                    <td class="text-right">{{ collect($regions)->sum('total') }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        </div>
+
     </div>
 </div>
 @endsection

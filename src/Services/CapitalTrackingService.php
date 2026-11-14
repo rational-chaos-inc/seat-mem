@@ -113,7 +113,7 @@ class CapitalTrackingService
      * flushed cache shows real figures rather than an empty page, it just
      * pays for them once.
      *
-     * @return array{types: array, accounts: array, missing_groups: array, generated_at: ?Carbon}
+     * @return array{types: array, accounts: array, regions: array, missing_groups: array, generated_at: ?Carbon}
      */
     public function cached(): array
     {
@@ -126,6 +126,7 @@ class CapitalTrackingService
         return [
             'types' => $payload['types'] ?? [],
             'accounts' => $payload['accounts'] ?? [],
+            'regions' => $payload['regions'] ?? [],
             'missing_groups' => $payload['missing_groups'] ?? [],
             'generated_at' => isset($payload['generated_at'])
                 ? Carbon::parse($payload['generated_at'])
@@ -144,7 +145,7 @@ class CapitalTrackingService
     }
 
     /**
-     * @return array{types: array, accounts: array, missing_groups: array}
+     * @return array{types: array, accounts: array, regions: array, missing_groups: array}
      */
     public function build(): array
     {
@@ -152,7 +153,7 @@ class CapitalTrackingService
         $groups = $this->consolidation->allAccountGroups();
 
         if (empty($groups)) {
-            return ['types' => [], 'accounts' => [], 'missing_groups' => $missingGroups];
+            return ['types' => [], 'accounts' => [], 'regions' => [], 'missing_groups' => $missingGroups];
         }
 
         $characterToMain = [];
@@ -165,7 +166,7 @@ class CapitalTrackingService
         $hulls = $this->hulls(array_keys($characterToMain));
 
         if ($hulls->isEmpty()) {
-            return ['types' => [], 'accounts' => [], 'missing_groups' => $missingGroups];
+            return ['types' => [], 'accounts' => [], 'regions' => [], 'missing_groups' => $missingGroups];
         }
 
         $names = $this->characterNames($hulls->pluck('character_id')->unique()->all());
@@ -188,6 +189,7 @@ class CapitalTrackingService
         return [
             'types' => $this->byType($hulls, $accountNames),
             'accounts' => $this->byAccount($hulls, $groups, $accountNames),
+            'regions' => $this->byRegion($hulls),
             'missing_groups' => $missingGroups,
         ];
     }
@@ -301,6 +303,35 @@ class CapitalTrackingService
                         ])
                         ->values()
                         ->all(),
+                ];
+            })
+            ->sortByDesc('total')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * One row per region, with a count per hull class - where the
+     * fleet actually is, rather than who owns it.
+     */
+    private function byRegion(Collection $hulls): array
+    {
+        return $hulls
+            ->groupBy('region')
+            ->map(function (Collection $inRegion, $region) {
+                $counts = [];
+
+                foreach (array_keys(self::CAPITAL_GROUPS) as $groupId) {
+                    $counts[$groupId] = (int) $inRegion->where('group_id', $groupId)->sum('quantity');
+                }
+
+                return [
+                    'region' => (string) $region,
+                    'counts' => $counts,
+                    'total' => (int) $inRegion->sum('quantity'),
+                    // Hulls sitting in space rather than docked, so a
+                    // region holding them can say so.
+                    'in_space' => (int) $inRegion->where('in_space', true)->sum('quantity'),
                 ];
             })
             ->sortByDesc('total')
