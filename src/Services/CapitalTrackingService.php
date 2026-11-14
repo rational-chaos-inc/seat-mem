@@ -328,11 +328,20 @@ class CapitalTrackingService
 
                 $holders = $inRegion
                     ->groupBy('main_character_id')
-                    ->map(fn(Collection $theirs, $mainId) => [
-                        'name' => $accountNames[(int) $mainId] ?? "Unknown ({$mainId})",
-                        'count' => (int) $theirs->sum('quantity'),
-                    ])
-                    ->sortByDesc('count')
+                    ->map(function (Collection $theirs, $mainId) use ($accountNames) {
+                        $held = [];
+
+                        foreach (array_keys(self::CAPITAL_GROUPS) as $groupId) {
+                            $held[$groupId] = (int) $theirs->where('group_id', $groupId)->sum('quantity');
+                        }
+
+                        return [
+                            'name' => $accountNames[(int) $mainId] ?? "Unknown ({$mainId})",
+                            'counts' => $held,
+                            'total' => (int) $theirs->sum('quantity'),
+                        ];
+                    })
+                    ->sortByDesc('total')
                     ->values()
                     ->all();
 

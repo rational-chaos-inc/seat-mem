@@ -385,7 +385,7 @@
                     <div class="alert alert-info mb-0">No capital hulls found.</div>
                 @else
                     <div style="overflow-x: auto;">
-                        <table class="table table-sm table-striped table-hover">
+                        <table class="table table-sm table-hover">
                             <thead>
                                 <tr>
                                     <th>Region</th>
@@ -395,8 +395,8 @@
                                     <th class="text-right">Total</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @foreach($regions as $region)
+                            @foreach($regions as $region)
+                                <tbody>
                                     <tr class="me-expand" style="cursor: pointer;"
                                         data-target="region-{{ $loop->index }}">
                                         <td>
@@ -417,16 +417,25 @@
                                         @endforeach
                                         <td class="text-right"><strong>{{ $region['total'] }}</strong></td>
                                     </tr>
-                                    <tr id="region-{{ $loop->index }}" hidden>
-                                        <td colspan="{{ count($groups) + 2 }}" class="bg-light">
-                                            <span class="text-muted mr-1">Held by:</span>
-                                            @foreach($region['holders'] as $holder)
-                                                {{ $holder['name'] }} ({{ $holder['count'] }}){{ $loop->last ? '' : ',' }}
+                                </tbody>
+                                <tbody id="region-{{ $loop->index }}" hidden>
+                                    @foreach($region['holders'] as $holder)
+                                        <tr class="bg-light">
+                                            <td class="pl-4">{{ $holder['name'] }}</td>
+                                            @foreach($groups as $groupId => $groupName)
+                                                <td class="text-right">
+                                                    @if($holder['counts'][$groupId] > 0)
+                                                        {{ $holder['counts'][$groupId] }}
+                                                    @else
+                                                        <span class="text-muted">-</span>
+                                                    @endif
+                                                </td>
                                             @endforeach
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
+                                            <td class="text-right">{{ $holder['total'] }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            @endforeach
                             <tfoot>
                                 <tr class="font-weight-bold bg-light border-top">
                                     <td>Total ({{ count($regions) }} regions)</td>
