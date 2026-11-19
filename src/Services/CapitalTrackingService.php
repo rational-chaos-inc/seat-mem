@@ -80,6 +80,7 @@ class CapitalTrackingService
     public function __construct(
         private AccountConsolidationService $consolidation,
         private EntityResolutionService $entityResolution,
+        private LocationResolutionService $locations,
     ) {
     }
 
@@ -412,6 +413,10 @@ class CapitalTrackingService
         $maxDepth = self::MAX_NESTING_DEPTH;
         $fallbackGroups = $this->fallbackCase(1);
         $fallbackNames = $this->fallbackCase(2);
+        $locationJoins = $this->locations->joins();
+        $systemName = $this->locations->systemNameExpression();
+        $regionName = $this->locations->regionNameExpression();
+        $inSpace = $this->locations->inSpaceExpression();
 
         $sql = <<<SQL
             WITH RECURSIVE roots AS (
@@ -434,23 +439,13 @@ class CapitalTrackingService
                        COALESCE(it.typeName, {$fallbackNames}) AS type_name,
                        COALESCE(ig.groupID, {$fallbackGroups}) AS group_id,
                        ig.groupName AS group_name,
-                       ss.name AS system_name,
-                       reg.name AS region_name,
-                       CASE WHEN ss.system_id = r.root_location THEN 1 ELSE 0 END AS in_space
+                       {$systemName} AS system_name,
+                       {$regionName} AS region_name,
+                       {$inSpace} AS in_space
                 FROM roots r
                 LEFT JOIN invTypes it ON it.typeID = r.type_id
                 LEFT JOIN invGroups ig ON ig.groupID = it.groupID
-                LEFT JOIN universe_structures us ON us.structure_id = r.root_location
-                LEFT JOIN mapDenormalize md ON md.itemID = r.root_location
-                LEFT JOIN staStations sta ON sta.stationID = r.root_location
-                -- root_location last: a ship left in space reports the
-                -- solar system as its location, and the SDE row for a
-                -- system carries a region but leaves solarSystemID null,
-                -- so the three joins above all come back empty for it.
-                LEFT JOIN solar_systems ss
-                       ON ss.system_id = COALESCE(us.solar_system_id, md.solarSystemID,
-                                                  sta.solarSystemID, r.root_location)
-                LEFT JOIN regions reg ON reg.region_id = ss.region_id
+                {$locationJoins}
             ) resolved
             WHERE resolved.group_id IN ({$groupIds})
         SQL;

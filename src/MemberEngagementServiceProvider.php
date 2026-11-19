@@ -9,6 +9,7 @@ use RCI\MemberEngagement\Services\CapitalHistoryService;
 use RCI\MemberEngagement\Services\CapitalTrackingService;
 use RCI\MemberEngagement\Services\DataCollectionService;
 use RCI\MemberEngagement\Services\EntityResolutionService;
+use RCI\MemberEngagement\Services\LocationResolutionService;
 use RCI\MemberEngagement\Services\MonthlyAggregationService;
 use RCI\MemberEngagement\Services\NetWorthService;
 use RCI\MemberEngagement\Services\RankingService;
@@ -60,6 +61,7 @@ class MemberEngagementServiceProvider extends AbstractSeatPlugin
         $this->app->singleton(DataCollectionService::class);
         $this->app->singleton(AggregationService::class);
         $this->app->singleton(EntityResolutionService::class);
+        $this->app->singleton(LocationResolutionService::class);
         $this->app->singleton(AccountConsolidationService::class);
         $this->app->singleton(MonthlyAggregationService::class);
         $this->app->singleton(RankingService::class);

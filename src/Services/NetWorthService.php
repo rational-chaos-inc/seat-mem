@@ -73,6 +73,7 @@ class NetWorthService
     public function __construct(
         private AccountConsolidationService $consolidation,
         private EntityResolutionService $entityResolution,
+        private LocationResolutionService $locations,
     ) {
     }
 
@@ -634,47 +635,26 @@ class NetWorthService
     }
 
     /**
-     * The joins every asset query needs to place a root location, and the
-     * expression that reads a region out of them. Shared so the snapshot
-     * and the drill-down can never disagree about where something is.
-     *
-     * Four sources, because no one of them covers everything:
-     *
-     *   - a player structure SeAT has resolved, via its solar system
-     *   - the SDE celestial table, which covers NPC stations and, for a
-     *     ship left in space, the solar system row itself
-     *   - staStations, for the NPC stations the celestial table omits -
-     *     Zarzakh's Fulcrum is in one and not the other
-     *   - solar_systems directly, in case a system ever reaches us with
-     *     no celestial row at all
+     * Placing a root location is shared with Capital Tracking and has
+     * to survive the SDE changing shape underneath it, so it lives in
+     * LocationResolutionService. These two keep the call sites legible.
      */
     private function regionJoins(): string
     {
-        return <<<SQL
-            LEFT JOIN universe_structures us ON us.structure_id = r.root_location
-            LEFT JOIN mapDenormalize md_direct ON md_direct.itemID = r.root_location
-            LEFT JOIN mapDenormalize md_struct ON md_struct.itemID = us.solar_system_id
-            LEFT JOIN staStations sta_direct ON sta_direct.stationID = r.root_location
-            LEFT JOIN solar_systems ss_space ON ss_space.system_id = r.root_location
-        SQL;
+        return $this->locations->joins();
     }
 
     private function regionExpression(): string
     {
-        return 'COALESCE(md_direct.regionID, md_struct.regionID, '
-            . 'sta_direct.regionID, ss_space.region_id)';
+        return $this->locations->regionIdExpression();
     }
 
     /**
-     * Names for the containers a drill-down groups by. Everything needed
-     * is already local: player structures SeAT has resolved, and the SDE
-     * for NPC stations. mapDenormalize covers most of the latter, but not
-     * all of them - Zarzakh's station is in staStations only - so both are
-     * consulted.
+     * Names for the containers a drill-down groups by.
      *
      * What is left over is genuinely unreachable: customs offices, the
      * PLEX vault, and structures nobody linked here has docking access to.
-     * ESI can't name those either - asked with the owning character's own
+     * ESI cannot name those either - asked with the owning character's own
      * token, /universe/structures answers Forbidden and the asset names and
      * locations endpoints reject the id outright, because it is not in that
      * character's asset list - so they fall back to a label rather than a
@@ -685,53 +665,10 @@ class NetWorthService
      */
     private function locationNames(array $locationIds, string $bucket): array
     {
-        $ids = collect($locationIds)->map(fn($id) => (string) $id)->unique();
-
-        if ($ids->isEmpty()) {
-            return [];
-        }
-
-        $structures = DB::table('universe_structures')
-            ->whereIn('structure_id', $ids)
-            ->get(['structure_id', 'name', 'type_id'])
-            ->keyBy(fn($row) => (string) $row->structure_id);
-
-        $sde = DB::table('mapDenormalize')
-            ->whereIn('itemID', $ids)
-            ->whereNotNull('itemName')
-            ->get(['itemID', 'itemName', 'typeID'])
-            ->keyBy(fn($row) => (string) $row->itemID);
-
-        $stations = DB::table('staStations')
-            ->whereIn('stationID', $ids)
-            ->get(['stationID', 'stationName', 'stationTypeID'])
-            ->keyBy(fn($row) => (string) $row->stationID);
-
-        // A ship left in space is parented to the solar system itself, not
-        // to any container, so these read as a place rather than a hangar.
-        $systems = DB::table('solar_systems')
-            ->whereIn('system_id', $ids)
-            ->pluck('name', 'system_id')
-            ->mapWithKeys(fn($name, $id) => [(string) $id => $name]);
-
-        $fallback = $bucket === self::CUSTOMS_OFFICE ? 'Customs office' : 'Unreachable structure';
-
-        return $ids->mapWithKeys(function ($id) use ($structures, $sde, $stations, $systems, $fallback) {
-            if ($structure = $structures->get($id)) {
-                return [$id => ['name' => $structure->name, 'type_id' => (int) $structure->type_id]];
-            }
-            if ($system = $systems->get($id)) {
-                return [$id => ['name' => 'In space - ' . $system, 'type_id' => null]];
-            }
-            if ($entry = $sde->get($id)) {
-                return [$id => ['name' => $entry->itemName, 'type_id' => (int) $entry->typeID]];
-            }
-            if ($station = $stations->get($id)) {
-                return [$id => ['name' => $station->stationName, 'type_id' => (int) $station->stationTypeID]];
-            }
-
-            return [$id => ['name' => $fallback . ' ' . $id, 'type_id' => null]];
-        })->all();
+        return $this->locations->names(
+            $locationIds,
+            $bucket === self::CUSTOMS_OFFICE ? 'Customs office' : 'Unreachable structure'
+        );
     }
 
     /** Value of everything nested below an item, at any depth. */
