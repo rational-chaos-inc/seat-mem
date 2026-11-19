@@ -78,7 +78,7 @@ class LocationResolutionService
      * above, `loc_system` (solar_systems) and `loc_region` (regions).
      * Aliases for absent tables are simply not emitted, so every
      * expression below has to tolerate their absence - which is what
-     * sqlAlias() is for.
+     * coalesceOrNull() is for.
      */
     public function joins(string $alias = 'r', string $column = 'root_location'): string
     {
