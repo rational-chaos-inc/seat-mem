@@ -23,10 +23,11 @@ use Illuminate\Support\Facades\Schema;
  * (mapSolarSystems, npcStations, mapPlanets and so on). SeAT derives
  * regions, solar_systems, constellations, planets and moons FROM
  * mapDenormalize, so that import has to change before this plugin can do
- * anything about it. What this class can do is make each source optional:
- * every table is probed before it is joined, so an install whose schema
- * has moved on resolves what it still can and reports the rest as
- * unknown, rather than every asset query throwing.
+ * anything about it - raised with the SeAT developers on 2026-11-19.
+ * What this class can do is make each source optional: every table is
+ * probed before it is joined, so an install whose schema has moved on
+ * resolves what it still can and reports the rest as unknown, rather
+ * than every asset query throwing.
  *
  * @see https://developers.eveonline.com/blog/the-sde-over-http-static-data-dynamically
  */

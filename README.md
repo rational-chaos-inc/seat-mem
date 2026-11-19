@@ -231,7 +231,8 @@ return [
   the SDE to an HTTP service that drops `mapDenormalize` and `staStations`
   in favour of per-kind tables, and SeAT derives `regions`,
   `solar_systems`, `constellations`, `planets` and `moons` from
-  `mapDenormalize` - so that import has to move before this plugin can.
+  `mapDenormalize` - so that import has to move before this plugin can,
+  which was raised with the SeAT developers on 2026-11-19.
   What this plugin does is probe every source table before joining it, so
   an install whose schema has moved on resolves what it still can and
   reports the rest as unknown instead of erroring. Capital hulls are
