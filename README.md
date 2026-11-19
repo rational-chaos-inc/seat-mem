@@ -227,6 +227,16 @@ return [
   asset list. A ship left in space is a different case and does resolve -
   it is parented to the solar system itself, and reads as
   "In space - <system>".
+- **Location resolution survives the SDE changing shape**: CCP is moving
+  the SDE to an HTTP service that drops `mapDenormalize` and `staStations`
+  in favour of per-kind tables, and SeAT derives `regions`,
+  `solar_systems`, `constellations`, `planets` and `moons` from
+  `mapDenormalize` - so that import has to move before this plugin can.
+  What this plugin does is probe every source table before joining it, so
+  an install whose schema has moved on resolves what it still can and
+  reports the rest as unknown instead of erroring. Capital hulls are
+  unaffected either way: they sit in player structures, which SeAT
+  resolves from ESI rather than the SDE.
 - **Heartbeat can't backfill history**: ESI's online endpoint (and SeAT's
   `character_onlines` sync of it) only ever holds each character's MOST
   RECENT known login/logout, not a history. A day is only ever recorded as
